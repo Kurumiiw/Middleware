@@ -1,6 +1,5 @@
 name: CI
 
-
 on:
   push:
     branches: [main]
@@ -10,6 +9,21 @@ on:
   workflow_dispatch:
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./middleware
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v3
+        with:
+          cache: pip
+      - run: python -m pip install poetry
+      - run: python -m poetry install
+      - uses: psf/black@stable
+        with:
+          options: "--check --verbose"
   test:
     runs-on: ubuntu-latest
     defaults:
