@@ -10,4 +10,5 @@ RUN poetry config virtualenvs.create false \
  && poetry install
 
 COPY ./middleware /app
-RUN python test.py
+
+CMD [ "python", "./test.py"]
