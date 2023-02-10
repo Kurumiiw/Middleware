@@ -10,7 +10,7 @@ def receive(sock):
             try:
                 data = sock.recv(1024)
                 if data:
-                    print("Received:",data)
+                    print("Received:",data.decode('utf-8'))
             except:
                 print("Error receiving data")
                 break
