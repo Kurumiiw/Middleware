@@ -1,32 +1,67 @@
 import socket
+import threading
 
 HOST = input("addr: ")
 MIDDLEWARE_PORT = 5000
 
+def receive(sock):
+    try:
+        while True:
+            try:
+                data = sock.recv(1024)
+                if data:
+                    print("Received:",data)
+            except:
+                print("Error receiving data")
+                break
+    except KeyboardInterrupt:
+        return
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 
     choice = input("Listen for connection? (y/n) ")
 
     if choice == "y":
-        print("[Socket] Binding address", HOST, "with port",
-              MIDDLEWARE_PORT, "for", s.type, "...")
-        s.bind((HOST, MIDDLEWARE_PORT))
-        print("[Socket] Listening")
-        s.listen()
-        conn, addr = s.accept()
-        with conn:
-            print(f"[Socket] Connected by {addr}")
-            while True:
-                data = conn.recv(1024)
-                if not data:
-                    break
-                conn.sendall(data)
+        while True:
+            print("[Socket] Binding address", HOST, "with port",
+                MIDDLEWARE_PORT, "for", s.type, "...")
+            s.bind((HOST, MIDDLEWARE_PORT))
+            print("[Socket] Listening")
+            s.listen()
+            conn, addr = s.accept()
+            print("[Socket] Connected to", addr)
+            receiveThread = threading.Thread(target=receive, args=(conn,))
+            receiveThread.daemon = True
+            receiveThread.start()
+            try:
+                while True:
+                    try:
+                        data = input()
+                        if data:
+                            conn.sendall(bytes(data, 'ascii'))
+                    except:
+                        print("Error sending data")
+                        receiveThread.join()
+                        break
+            except KeyboardInterrupt:
+                exit()
     else:
         print("[Socket] Sending data")
         s.connect((HOST, MIDDLEWARE_PORT))
-        s.sendall(bytes(input("string: "), 'ascii'))
-        data = s.recv(1024)
-        print(f"Received {data!r}")
+        receiveThread = threading.Thread(target=receive, args=(s,))
+        receiveThread.daemon = True
+        receiveThread.start()
+        try:
+            while True:
+                try:
+                    data = input("string: ")
+                    if data:
+                        s.sendall(bytes(data, 'ascii'))
+                except:
+                    print("Error sending data")
+                    receiveThread.join()
+                    break
+        except KeyboardInterrupt:
+            exit()
 
     print("Goodbye")
