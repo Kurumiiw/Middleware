@@ -38,7 +38,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     try:
                         data = input()
                         if data:
-                            conn.sendall(bytes(data, 'ascii'))
+                            conn.sendall(bytes(data, 'utf-8'))
                     except:
                         print("Error sending data")
                         receiveThread.join()
@@ -56,7 +56,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 try:
                     data = input("string: ")
                     if data:
-                        s.sendall(bytes(data, 'ascii'))
+                        s.sendall(bytes(data, 'utf-8'))
                 except:
                     print("Error sending data")
                     receiveThread.join()
