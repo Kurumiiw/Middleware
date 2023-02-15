@@ -5,6 +5,10 @@ from middleware.fragmentation.packet import (
     MissingFragmentException,
     EffectiveMTUTooLowException,
 )
+from _pytest.assertion import truncate
+
+truncate.DEFAULT_MAX_LINES = 9999
+truncate.DEFAULT_MAX_CHARS = 9999
 
 SAMPLE_DATA = [145, 234, 255, 245]
 
@@ -13,9 +17,10 @@ def test_packet_creation():
     """
     Tests combinations of packet creation options.
     """
+    Packet.packet_id_counter = 0
     p = Packet(bytearray([1, 2, 3, 4]))
 
-    assert p.data == bytearray([0, 0, 1, 2, 3, 4])
+    assert p.data == bytearray([1, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4])
 
     p = Packet(bytearray([1, 2, 3, 4]), create_header=False)
 
@@ -23,7 +28,7 @@ def test_packet_creation():
 
     p = Packet(bytearray([1, 2, 3, 4]), seq=5, final=7)
 
-    assert p.data == bytearray([5, 7, 1, 2, 3, 4])
+    assert p.data == bytearray([2, 0, 0, 0, 5, 0, 7, 0, 1, 2, 3, 4])
 
 
 def test_create_empty_packet_exception():
@@ -38,14 +43,16 @@ def test_fragmentation():
     """
     Tests whether fragmentation and reassembly of ordered fragments works.
     """
+    Packet.packet_id_counter = 0
+
     p = Packet(bytearray(SAMPLE_DATA))
 
-    assert p.data == bytearray([0, 0]) + bytearray(SAMPLE_DATA)
+    assert p.data == bytearray([1, 0, 0, 0, 0, 0, 0, 0]) + bytearray(SAMPLE_DATA)
 
-    # MTU chosen to be 63, so the adjusted mtu = 1, i.e 1 byte of data per packet.
-    fragments = tuple(Packet.fragment(p, mtu=63))
+    # MTU chosen to be 69, so the adjusted mtu = 1, i.e 1 byte of data per packet.
+    fragments = tuple(Packet.fragment(p, mtu=69))
 
-    assert len(fragments) == 6
+    assert len(fragments) == 12
 
     p2 = Packet.reassemble(fragments)
 
@@ -59,7 +66,7 @@ def test_unordered_packet_reassembly():
     p = Packet(bytearray(SAMPLE_DATA))
 
     # Fragment packet to fragments with one byte of data each.
-    fragments = list(Packet.fragment(p, mtu=63))
+    fragments = list(Packet.fragment(p, mtu=69))
 
     random.shuffle(fragments)
 
@@ -75,7 +82,7 @@ def test_missing_fragment_exception():
     # Test with a packet in the middle missing.
     p = Packet(bytearray(SAMPLE_DATA))
 
-    fragments = list(Packet.fragment(p, mtu=63))
+    fragments = list(Packet.fragment(p, mtu=69))
 
     fragments.remove(fragments[3])
 
@@ -85,7 +92,7 @@ def test_missing_fragment_exception():
     # Test with an end packet missing.
     p2 = Packet(bytearray(SAMPLE_DATA))
 
-    fragments = list(Packet.fragment(p2, mtu=63))[:2]
+    fragments = list(Packet.fragment(p2, mtu=69))[:2]
 
     with pytest.raises(MissingFragmentException):
         Packet.reassemble(fragments)
