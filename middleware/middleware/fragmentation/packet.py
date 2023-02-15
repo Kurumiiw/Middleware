@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Iterator, List
+import sys
 
 MAX_TCP_HEADER_BYTES = 60
 
@@ -25,11 +26,15 @@ class Packet:
     Represents a base instance of a packet.
     """
 
-    data: bytearray = None
+    # Static variable for keeping track of global package id counter.
+    # TODO: Should probably keep a separate counter per service to reduce chance
+    # of collision, or do it in a better way.
+    packet_id_counter: int = 0
 
-    # Preliminary header format:
-    # Byte 1: Sequence number.
-    # Byte 2: Last sequence number required for this packet to be complete.
+    # Current header format:
+    # Byte 1-4: Packet ID. Used for distinguishing
+    # Byte 5-6: Fragment ID.
+    # Byte 7-8: Max fragment ID. If 0, packet is not fragmented.
     def __init__(
         self,
         data: bytearray,
@@ -45,7 +50,12 @@ class Packet:
 
         self.data = bytearray()
         if create_header:
-            self.data.extend([seq, final])
+            self.data.extend(
+                Packet.get_next_packet_id().to_bytes(4, byteorder=sys.byteorder)
+            )
+            self.data.extend(seq.to_bytes(2, byteorder=sys.byteorder))
+            self.data.extend(final.to_bytes(2, byteorder=sys.byteorder))
+
         self.data.extend(data)
 
     def get_size(self) -> int:
@@ -58,7 +68,7 @@ class Packet:
         """
         Returns the size of the header portion of this packet in bytes.
         """
-        return 2  # Currently hardcoded to be 2.
+        return len(self.get_header())  # Currently hardcoded to be 2.
 
     def get_data_size(self) -> int:
         """
@@ -70,13 +80,37 @@ class Packet:
         """
         Returns the header portion of the packet.
         """
-        return self.data[0:2]
+        return self.data[0:8]
+
+    def get_packet_id(self) -> int:
+        """
+        Returns the packet identifier portion of the header.
+        """
+        return int.from_bytes(
+            self.get_header()[0:4], byteorder=sys.byteorder, signed=False
+        )
+
+    def get_fragment_number(self) -> int:
+        """
+        Returns the fragment id portion of the header.
+        """
+        return int.from_bytes(
+            self.get_header()[4:6], byteorder=sys.byteorder, signed=False
+        )
+
+    def get_last_fragment_number(self) -> int:
+        """
+        Returns the final fragment id in this sequence.
+        """
+        return int.from_bytes(
+            self.get_header()[6:8], byteorder=sys.byteorder, signed=False
+        )
 
     def get_data(self) -> bytearray:
         """
         Returns the data portion of the packet.
         """
-        return self.data[2:]
+        return self.data[8:]
 
     @staticmethod
     def fragment(packet: Packet, /, mtu: int = 500) -> Iterator[Packet]:
@@ -91,6 +125,10 @@ class Packet:
             raise EffectiveMTUTooLowException(
                 "Adjusting mtu for TCP and header overhead resulted in a negative MTU. Please choose a larger MTU."
             )
+
+        # No need to fragment if size is already < effective_mtu
+        if packet.get_size() <= effective_mtu:
+            return iter(packet)
 
         offset = 0
         counter = 0
@@ -113,7 +151,7 @@ class Packet:
         """
         Reorders a list of packets according to their sequence numbers.
         """
-        return sorted(list(fragments), key=lambda p: p.data[0])
+        return sorted(list(fragments), key=lambda p: p.get_fragment_number())
 
     @staticmethod
     def reassemble(fragments: Iterator[Packet]) -> Packet:
@@ -122,7 +160,7 @@ class Packet:
         contain only fragments from the original packet, but can be unordered.
         """
         # Check for missing packets.
-        if len(fragments) != fragments[0].get_header()[1]:
+        if len(fragments) != fragments[0].get_last_fragment_number():
             raise MissingFragmentException(
                 "A packet was missing during attempt at reassembly."
             )
@@ -133,3 +171,13 @@ class Packet:
             result.extend(x.get_data())
 
         return Packet(result, create_header=False)
+
+    @staticmethod
+    def get_next_packet_id() -> int:
+        """
+        Increments the global packet id counter and returns the new value.
+        """
+        Packet.packet_id_counter = Packet.packet_id_counter + 1
+        if Packet.packet_id_counter > 4294967295:  # 4 byte unsigned int max.
+            Packet.packet_id_counter = 0
+        return Packet.packet_id_counter
