@@ -5,7 +5,12 @@
 Do the following while in the subfolder `middleware/`
 
 - `docker build -t middleware .`
-- `docker run middleware`
+- `docker run -it middleware`
+
+For macOS on Apple Silicon, you need to target the right architecture:
+
+- `docker build --platform linux/amd64 -t middleware  .`
+- `docker run -it --platform linux/amd64 middleware`
 
 ## Poetry
 
