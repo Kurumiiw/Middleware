@@ -5,10 +5,6 @@ from middleware.fragmentation.packet import (
     MissingFragmentException,
     EffectiveMTUTooLowException,
 )
-from _pytest.assertion import truncate
-
-truncate.DEFAULT_MAX_LINES = 9999
-truncate.DEFAULT_MAX_CHARS = 9999
 
 SAMPLE_DATA = [145, 234, 255, 245]
 
@@ -51,6 +47,10 @@ def test_fragmentation():
 
     # MTU chosen to be 69, so the adjusted mtu = 1, i.e 1 byte of data per packet.
     fragments = tuple(Packet.fragment(p, mtu=69))
+
+    # Check packet id being equal in fragments.
+    for x in fragments[1:]:
+        assert x.get_packet_id() == fragments[0].get_packet_id()
 
     assert len(fragments) == 12
 
