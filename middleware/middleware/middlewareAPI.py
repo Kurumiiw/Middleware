@@ -1,111 +1,113 @@
 from socket import *
-
-
+import threading
 class MiddleWareAPI():
-    def __init__(self, ip, port, reliable = False, TOS = 0, MTU= 1500, timeout = 0.5, maxRetries = 5, bufferSize = 1024):
+
+    @staticmethod
+    def reliable(ip, port, TOS = 0, MTU= 1500, timeout = 0.5, maxRetries = 5, bufferSize = 1024):
+        return MiddleWareReliable(ip, port, TOS, MTU, timeout, maxRetries, bufferSize)
+    
+    @staticmethod
+    def unreliable(ip, port, TOS = 0, MTU= 1500, timeout = 0.5, maxRetries = 5, bufferSize = 1024):
+        return MiddleWareUnreliable(ip, port, TOS, MTU, timeout, maxRetries, bufferSize)
+    
+
+class MiddleWareReliable():
+    def __init__(self, ip, port, TOS = 0, MTU= 1500, timeout = 0.5, maxRetries = 5, bufferSize = 1024, sock = None):
         self.ip = ip
         self.port = port
-        self.reliable = reliable
         self.TOS = TOS
         self.MTU = MTU
         self.timeout = timeout
         self.maxRetries = maxRetries
         self.bufferSize = bufferSize
-
-
-    def send(self, data: bytes, address: tuple) -> None:
-        if self.reliable:
-            return self.sendReliable(data, address)
+        if sock is None:
+            self.socko = socket(AF_INET, SOCK_STREAM)
+            self.socko.setsockopt(IPPROTO_IP, IP_TOS, self.TOS)
+            self.socko.setsockopt(SOL_SOCKET, SO_RCVBUF, self.bufferSize)
+            self.socko.setsockopt(SOL_SOCKET, SO_SNDBUF, self.bufferSize)
+            self.socko.settimeout(self.timeout)
         else:
-            return self.sendUnreliable(data, address)
+            self.socko = sock
     
-    def sendUnreliable(self, data: bytes, address: tuple) -> None:
-        sendSocket = socket(AF_INET, SOCK_DGRAM)
-        sendSocket.setsockopt(IPPROTO_IP, IP_TOS, self.TOS)
-        sendSocket.setsockopt(SOL_SOCKET, SO_RCVBUF, self.bufferSize)
-        sendSocket.setsockopt(SOL_SOCKET, SO_SNDBUF, self.bufferSize)
-        sendSocket.settimeout(self.timeout)
-        sendSocket.bind((self.ip, self.port))
-        sendSocket.sendto(data, address)
+    def connect(self, address: tuple[str, int]) -> None:
+        self.socko.connect(address)
+
+    def send(self, data: bytes) -> None:
+        self.socko.send(data)
+
+    def listen(self, backlog: int = 5) -> None:
+        self.socko.listen(backlog)
     
-    def sendReliable(self, data: bytes, address: tuple) -> None:
-        sendSocket = socket(AF_INET, SOCK_STREAM)
-        sendSocket.setsockopt(IPPROTO_IP, IP_TOS, self.TOS)
-        sendSocket.setsockopt(SOL_SOCKET, SO_RCVBUF, self.bufferSize)
-        sendSocket.setsockopt(SOL_SOCKET, SO_SNDBUF, self.bufferSize)
-        sendSocket.settimeout(self.timeout)
-        sendSocket.bind((self.ip, self.port))
-        sendSocket.connect(address)
-        sendSocket.send(data)
-        sendSocket.close()
+    def bind(self, address: tuple[str, int]) -> None:
+        self.socko.bind(address)
     
-    def receive(self) -> tuple[bytes, tuple]:
-        if self.reliable:
-            return self.receiveReliable()
-        else:
-            return self.receiveUnreliable()
+    def accept(self) -> tuple["MiddleWareReliable", tuple[str, int]]:
+        sock, address = self.socko.accept()
+        return MiddleWareReliable(*sock.getsockname(), sock=sock), address
     
-    def receiveUnreliable(self) -> tuple[bytes, tuple]:
-        receiveSocket = socket(AF_INET, SOCK_DGRAM)
-        receiveSocket.setsockopt(IPPROTO_IP, IP_TOS, self.TOS)
-        receiveSocket.setsockopt(SOL_SOCKET, SO_RCVBUF, self.bufferSize)
-        receiveSocket.setsockopt(SOL_SOCKET, SO_SNDBUF, self.bufferSize)
-        receiveSocket.settimeout(self.timeout)
-        receiveSocket.bind((self.ip, self.port))
-        data, address = receiveSocket.recvfrom(self.MTU)
-        return data, address
+    @classmethod
+    def fromSocket(cls, sock: socket) -> "MiddleWareReliable":
+        return cls(sock=sock)
     
-    def receiveReliable(self) -> tuple[bytes, tuple]:
-        receiveSocket = socket(AF_INET, SOCK_STREAM)
-        receiveSocket.setsockopt(IPPROTO_IP, IP_TOS, self.TOS)
-        receiveSocket.setsockopt(SOL_SOCKET, SO_RCVBUF, self.bufferSize)
-        receiveSocket.setsockopt(SOL_SOCKET, SO_SNDBUF, self.bufferSize)
-        receiveSocket.settimeout(self.timeout)
-        receiveSocket.bind((self.ip, self.port))
-        receiveSocket.listen(1)
-        connection, address = receiveSocket.accept()
-        data = connection.recv(self.MTU)
-        connection.close()
-        return data, address
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    def setReliable(self, reliable):
-        self.reliable = reliable
+    def close(self) -> None:
+        """Banishes the socket from the mortal realm"""
+        self.socko.close()
     
-    def setTOS(self, TOS):
+    def receive(self) -> bytes:
+        return self.socko.recv(self.MTU)
+    
+        
+    
+    
+    
+
+class MiddleWareUnreliable():
+    def __init__(self, ip:str, port:int, TOS:int = 0, MTU:int = 1500, timeout:float = 0.5, maxRetries:int = 5, bufferSize:int = 1024):
+        self.ip = ip
+        self.port = port
         self.TOS = TOS
-    
-    def setMTU(self, MTU):
         self.MTU = MTU
-    
-    def setTimeout(self, timeout):
         self.timeout = timeout
-
-    def setMaxRetries(self, maxRetries):
         self.maxRetries = maxRetries
-    
-    def setBufferSize(self, bufferSize):
         self.bufferSize = bufferSize
+        self.socko = socket(AF_INET, SOCK_DGRAM)
+        self.socko.setsockopt(IPPROTO_IP, IP_TOS, self.TOS)
+        self.socko.setsockopt(SOL_SOCKET, SO_RCVBUF, self.bufferSize)
+        self.socko.setsockopt(SOL_SOCKET, SO_SNDBUF, self.bufferSize)
+        self.socko.settimeout(self.timeout)
+
+    def send(self, data: bytes, address: tuple[str, int]) -> None:
+        self.socko.sendto(data, address)
+
+    def receive(self) -> tuple[bytes, tuple[str, int]]:
+        self.socko.bind((self.ip, self.port))
+        data, address = self.socko.recvfrom(self.MTU)
+        return data, address
+
+    def close(self) -> None:
+        """Banishes the socket from the mortal realm"""
+        self.socko.shutdown(SHUT_RDWR)
+        self.socko.close()
+        
+
+
+    
+# if __name__ == "__main__":
+#     def test(mwSocket):
+#         conn, addr = mwSocket.accept()
+#         print(conn)
+#         print(conn.receive())
+#         conn.send(b"General Kenobi")
+#     mw = MiddleWareAPI.reliable("", 5000)
+#     mw2 = MiddleWareAPI.reliable("", 5005)
+#     mw.bind(("", 5000))
+#     mw.listen()
+#     threading.Thread(target=test, args=(mw,)).start()
+#     mw2.connect(("localhost", 5000))
+#     mw2.send(b"Hello there")
+#     print(mw2.receive())
+
+
+#     print(mw)
+#     mw.close()
+#     mw2.close()
