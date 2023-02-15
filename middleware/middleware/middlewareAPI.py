@@ -80,9 +80,11 @@ class MiddleWareUnreliable():
         self.socko.sendto(data, address)
 
     def receive(self) -> tuple[bytes, tuple[str, int]]:
-        self.socko.bind((self.ip, self.port))
         data, address = self.socko.recvfrom(self.MTU)
         return data, address
+    
+    def bind(self) -> None:
+        self.socko.bind((self.ip, self.port))
 
     def close(self) -> None:
         """Banishes the socket from the mortal realm"""
@@ -105,7 +107,7 @@ class MiddleWareUnreliable():
 #     threading.Thread(target=test, args=(mw,)).start()
 #     mw2.connect(("localhost", 5000))
 #     mw2.send(b"Hello there")
-#     print(mw2.receive())
+#     print(mw2.receive()) 
 
 
 #     print(mw)
