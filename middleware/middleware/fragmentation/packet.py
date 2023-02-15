@@ -39,6 +39,7 @@ class Packet:
         self,
         data: bytearray,
         /,
+        packet_counter: int = None,
         create_header: bool = True,
         seq: int = 0,
         final: int = 0,
@@ -50,9 +51,10 @@ class Packet:
 
         self.data = bytearray()
         if create_header:
-            self.data.extend(
-                Packet.get_next_packet_id().to_bytes(4, byteorder=sys.byteorder)
-            )
+            if packet_counter is None:
+                packet_counter = Packet.get_next_packet_id()
+
+            self.data.extend(packet_counter.to_bytes(4, byteorder=sys.byteorder))
             self.data.extend(seq.to_bytes(2, byteorder=sys.byteorder))
             self.data.extend(final.to_bytes(2, byteorder=sys.byteorder))
 
@@ -138,6 +140,7 @@ class Packet:
             yield Packet(
                 packet.data[offset : (offset + effective_mtu)],
                 create_header=True,
+                packet_counter=packet.get_packet_id(),
                 seq=counter,
                 final=final,
             )
