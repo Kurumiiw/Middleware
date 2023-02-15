@@ -1,17 +1,17 @@
 from socket import *
 import threading
-class MiddleWareAPI():
+class MiddlewareAPI():
 
     @staticmethod
     def reliable(ip, port, TOS = 0, MTU= 1500, timeout = 0.5, maxRetries = 5, bufferSize = 1024):
-        return MiddleWareReliable(ip, port, TOS, MTU, timeout, maxRetries, bufferSize)
+        return MiddlewareReliable(ip, port, TOS, MTU, timeout, maxRetries, bufferSize)
     
     @staticmethod
     def unreliable(ip, port, TOS = 0, MTU= 1500, timeout = 0.5, maxRetries = 5, bufferSize = 1024):
-        return MiddleWareUnreliable(ip, port, TOS, MTU, timeout, maxRetries, bufferSize)
+        return MiddlewareUnreliable(ip, port, TOS, MTU, timeout, maxRetries, bufferSize)
     
 
-class MiddleWareReliable():
+class MiddlewareReliable():
     def __init__(self, ip, port, TOS = 0, MTU= 1500, timeout = 0.5, maxRetries = 5, bufferSize = 1024, sock = None):
         self.ip = ip
         self.port = port
@@ -41,12 +41,12 @@ class MiddleWareReliable():
     def bind(self, address: tuple[str, int]) -> None:
         self.socko.bind(address)
     
-    def accept(self) -> tuple["MiddleWareReliable", tuple[str, int]]:
+    def accept(self) -> tuple["MiddlewareReliable", tuple[str, int]]:
         sock, address = self.socko.accept()
-        return MiddleWareReliable(*sock.getsockname(), sock=sock), address
+        return MiddlewareReliable(*sock.getsockname(), sock=sock), address
     
     @classmethod
-    def fromSocket(cls, sock: socket) -> "MiddleWareReliable":
+    def fromSocket(cls, sock: socket) -> "MiddlewareReliable":
         return cls(sock=sock)
     
     def close(self) -> None:
@@ -61,7 +61,7 @@ class MiddleWareReliable():
     
     
 
-class MiddleWareUnreliable():
+class MiddlewareUnreliable():
     def __init__(self, ip:str, port:int, TOS:int = 0, MTU:int = 1500, timeout:float = 0.5, maxRetries:int = 5, bufferSize:int = 1024):
         self.ip = ip
         self.port = port
@@ -79,13 +79,17 @@ class MiddleWareUnreliable():
     def send(self, data: bytes, address: tuple[str, int]) -> None:
         self.socko.sendto(data, address)
 
-    def receive(self) -> tuple[bytes, tuple[str, int]]:
+    def bind(self) -> None:
         self.socko.bind((self.ip, self.port))
+
+    def receive(self) -> tuple[bytes, tuple[str, int]]:
         data, address = self.socko.recvfrom(self.MTU)
         return data, address
 
     def close(self) -> None:
-        """Banishes the socket from the mortal realm"""
+        """Closes the socket and banishes it from the mortal realm (or plane, if you prefer). 
+        Use this method to rid your system of any malevolent socket entities and restore order to the world of network programming!
+         \- ChatGPT 2023"""
         self.socko.shutdown(SHUT_RDWR)
         self.socko.close()
         
@@ -98,8 +102,8 @@ class MiddleWareUnreliable():
 #         print(conn)
 #         print(conn.receive())
 #         conn.send(b"General Kenobi")
-#     mw = MiddleWareAPI.reliable("", 5000)
-#     mw2 = MiddleWareAPI.reliable("", 5005)
+#     mw = MiddlewareAPI.reliable("", 5000, TOS = 0x5)
+#     mw2 = MiddlewareAPI.reliable("", 5005, TOS = 0x5)
 #     mw.bind(("", 5000))
 #     mw.listen()
 #     threading.Thread(target=test, args=(mw,)).start()
