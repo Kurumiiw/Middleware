@@ -1,6 +1,24 @@
 from __future__ import annotations
 from typing import Iterator, List
 
+MAX_TCP_HEADER_BYTES = 60
+
+
+class MissingFragmentException(ValueError):
+    """
+    Raised when a fragment is missing during attempted reassembly.
+    """
+
+    pass
+
+
+class EffectiveMTUTooLowException(ValueError):
+    """
+    Raised when adjusting provided MTU for TCP/header overhead results in a value lower than or equal to 0.
+    """
+
+    pass
+
 
 class Packet:
     """
@@ -27,9 +45,8 @@ class Packet:
 
         self.data = bytearray()
         if create_header:
-            self.data.append(seq)
-            self.data.append(final)
-        self.data = self.data + data
+            self.data.extend([seq, final])
+        self.data.extend(data)
 
     def get_size(self) -> int:
         """
@@ -53,7 +70,7 @@ class Packet:
         """
         Returns the header portion of the packet.
         """
-        return self.data[0:1]
+        return self.data[0:2]
 
     def get_data(self) -> bytearray:
         """
@@ -66,42 +83,53 @@ class Packet:
         """
         Fragments the packet appropriately for the chosen MTU.
         """
-        # Correct for max TCP header size.
-        # TODO: Make this smarter?
-        adjusted_mtu = mtu - 60 - packet.get_header_size()
+        # TODO: Finding a better way to determine TCP header size would avoid some overhead.
+        # Perhaps we can assume that our Middleware makes no packets with additional TCP header options?
+        effective_mtu = mtu - MAX_TCP_HEADER_BYTES - packet.get_header_size()
+
+        if effective_mtu <= 0:
+            raise EffectiveMTUTooLowException(
+                "Adjusting mtu for TCP and header overhead resulted in a negative MTU. Please choose a larger MTU."
+            )
+
         offset = 0
         counter = 0
-        final = int(packet.get_size() / adjusted_mtu) + 1
+        final = int(packet.get_size() / effective_mtu)
 
-        # TODO: Implement adding header for reordering and reassembling.
         while offset < packet.get_size():
             yield Packet(
-                packet.data[offset : (offset + adjusted_mtu)],
+                packet.data[offset : (offset + effective_mtu)],
                 create_header=True,
                 seq=counter,
                 final=final,
             )
-            offset = offset + adjusted_mtu
+            offset = offset + effective_mtu
             counter = counter + 1
 
         return
 
     @staticmethod
     def reorder(fragments: List[Packet]) -> List[Packet]:
-        # TODO: Sort fragments by sequence number.
-        return sorted(list(fragments), key=lambda packet: packet.data[0])
+        """
+        Reorders a list of packets according to their sequence numbers.
+        """
+        return sorted(list(fragments), key=lambda p: p.data[0])
 
     @staticmethod
     def reassemble(fragments: Iterator[Packet]) -> Packet:
         """
-        Reassembles a collection of fragments into the original packet.
+        Reassembles a collection of fragments into the original packet. Fragments should
+        contain only fragments from the original packet, but can be unordered.
         """
-        # TODO: Currently this does not reorder fragments. Not sure if that should
-        # be done here or somewhere else?
+        # Check for missing packets.
+        if len(fragments) != fragments[0].get_header()[1]:
+            raise MissingFragmentException(
+                "A packet was missing during attempt at reassembly."
+            )
 
-        # TODO: Take header into account when reassembling.
         result = bytearray()
+
         for x in Packet.reorder(list(fragments)):
-            result = result + x.get_data()
+            result.extend(x.get_data())
 
         return Packet(result, create_header=False)
