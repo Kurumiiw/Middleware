@@ -2,8 +2,8 @@
 #     exec(testGif.read())
 from middleware.middlewareAPI import *
 
-def test_create_MiddleWareReliable():
-    mw = MiddleWareReliable("", 5000)
+def test_create_MiddlewareReliable():
+    mw = MiddlewareReliable("", 5000)
     assert mw.ip == ""
     assert mw.port == 5000
     assert mw.TOS == 0
@@ -13,8 +13,8 @@ def test_create_MiddleWareReliable():
     assert mw.bufferSize == 1024
     assert mw.socko != None
 
-def test_create_MiddleWareUnreliable():
-    mw = MiddleWareUnreliable("", 5000)
+def test_create_MiddlewareUnreliable():
+    mw = MiddlewareUnreliable("", 5000)
     assert mw.ip == ""
     assert mw.port == 5000
     assert mw.TOS == 0
@@ -25,8 +25,8 @@ def test_create_MiddleWareUnreliable():
     assert mw.socko != None
 
 def test_send_and_receive_unreliable():
-    mwSend = MiddleWareUnreliable("", 5000)
-    mwReceive = MiddleWareUnreliable("", 5005)
+    mwSend = MiddlewareUnreliable("", 5000)
+    mwReceive = MiddlewareUnreliable("", 5005)
     mwReceive.bind()
     mwSend.send(b"Hello", ("localhost", 5005))
     dataReceived = mwReceive.receive()[0]
@@ -41,8 +41,8 @@ def test_send_and_receive_reliable():
         assert conn.receive() == b"Hello there"
         conn.send(b"General Kenobi")
 
-    mwReceive = MiddleWareAPI.reliable("", 5000)
-    mwSend = MiddleWareAPI.reliable("", 5005)
+    mwReceive = MiddlewareAPI.reliable("", 5000)
+    mwSend = MiddlewareAPI.reliable("", 5005)
 
     mwReceive.bind(("", 5000))
     mwReceive.listen()
@@ -73,8 +73,8 @@ def test_sending_and_receiving_large_file_reliable():
         
         assert allReceivedData == gifData
 
-    mwReceive = MiddleWareAPI.reliable("", 5000)
-    mwSend = MiddleWareAPI.reliable("", 5005)
+    mwReceive = MiddlewareAPI.reliable("", 5000)
+    mwSend = MiddlewareAPI.reliable("", 5005)
 
     mwReceive.bind(("", 5000))
     mwReceive.listen()
@@ -92,8 +92,8 @@ def test_sending_and_receiving_large_file_unreliable():
     gifData = testGif.read()
     testGif.close()
 
-    mwSend = MiddleWareUnreliable("", 5000)
-    mwReceive = MiddleWareUnreliable("", 5005)
+    mwSend = MiddlewareUnreliable("", 5000)
+    mwReceive = MiddlewareUnreliable("", 5005)
     mwReceive.timeout = 0
     mwReceive.bind()
     mwSend.send(gifData, ("localhost", 5005))
@@ -111,8 +111,8 @@ def test_sending_and_receiving_large_file_unreliable():
 
 
 if __name__ == "__main__":
-    test_create_MiddleWareReliable()
-    test_create_MiddleWareUnreliable()
+    test_create_MiddlewareReliable()
+    test_create_MiddlewareUnreliable()
     test_send_and_receive_unreliable()
     test_send_and_receive_reliable()
     test_sending_and_receiving_large_file_reliable()
