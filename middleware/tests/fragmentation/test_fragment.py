@@ -22,13 +22,13 @@ def test_creation():
 
 def test_constructor_validation():
     with pytest.raises(ValueError):
-        Fragment(bytearray(), 10, 5, 7)
+        Fragment(bytearray(), packet_id=10, seq=5, final=7)
 
     with pytest.raises(ValueError):
-        Fragment(SAMPLE_DATA, 10, 7, 6)
+        Fragment(SAMPLE_DATA, packet_id=10, seq=7, final=6)
 
     with pytest.raises(ValueError):
-        Fragment(SAMPLE_DATA, 0, 0, 0)
+        Fragment(SAMPLE_DATA, packet_id=0, seq=0, final=0)
 
 
 def test_ordered_fragmentation():
@@ -79,3 +79,18 @@ def test_packet_too_big_exception():
 
     with pytest.raises(PacketTooLarge):
         list(Fragment.fragment(p, mtu=69))
+
+
+def test_create_from_raw_data():
+    data = bytearray([0, 0, 0, 0, 1, 2, 3, 4])
+
+    p1 = Fragment.create_from_raw_data(data)
+    assert not p1.is_fragment()
+    assert p1.data == data
+
+    data = bytearray([0, 0, 0, 1, 0, 0, 0, 1, 1, 2, 3, 4])
+
+    p2 = Fragment.create_from_raw_data(data)
+
+    assert p2.is_fragment()
+    assert p2.data == data

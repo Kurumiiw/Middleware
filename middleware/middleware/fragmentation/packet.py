@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Union
 
 
 class Packet:
@@ -10,17 +11,16 @@ class Packet:
     # Byte 1-4: Packet ID. Used for distinguishing
     # Byte 5-6: Fragment ID.
     # Byte 7-8: Max fragment ID. If 0, packet is not fragmented.
-    def __init__(
-        self,
-        data: bytearray,
-    ):
+    def __init__(self, data: bytearray, no_header: bool = False):
         if len(data) == 0:
             raise ValueError(
                 "Unexpected data length. Data must be greater than 0 in length."
             )
 
         self.data = bytearray()
-        self.data.extend(bytearray([0, 0, 0, 0]))
+        if not no_header:
+            self.data.extend(bytearray([0, 0, 0, 0]))
+
         self.data.extend(data)
 
     def get_size(self) -> int:
@@ -58,3 +58,9 @@ class Packet:
         Returns the data portion of the packet.
         """
         return self.data[4:]
+
+    def is_fragment(self) -> bool:
+        """
+        Checks whether a package is a fragment.
+        """
+        return not self.get_packet_id() == 0
