@@ -40,7 +40,7 @@ def test_ordered_fragmentation():
 
     p2 = Fragment.reassemble(fragments)
 
-    p.get_data() == p2.get_data()
+    assert p.get_data() == p2.get_data()
 
 
 def test_unordered_fragmentation():
@@ -52,7 +52,7 @@ def test_unordered_fragmentation():
 
     p2 = Fragment.reassemble(fragments)
 
-    p.get_data() == p2.get_data()
+    assert p.get_data() == p2.get_data()
 
 
 def test_missing_fragment():

@@ -96,7 +96,6 @@ class Fragment(Packet):
         counter = 0
         final = int(packet.get_data_size() / effective_mtu)
 
-        print(final)
         if final > 65535:  # 2byte unsigned integer max.
             raise PacketTooLarge("Packet is too large to be fragmented properly.")
 
@@ -134,7 +133,6 @@ class Fragment(Packet):
             )
 
         result = bytearray()
-        result.extend(bytearray([0, 0, 0, 0]))
 
         for x in Fragment.reorder(list(fragments)):
             result.extend(x.get_data())
