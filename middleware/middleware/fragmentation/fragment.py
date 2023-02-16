@@ -1,7 +1,7 @@
 from __future__ import annotations
 from middleware.fragmentation.packet import Packet
-from typing import Iterator, List, Union
-
+from typing import Iterator, List, Optional, Union
+import math
 
 MAX_TCP_HEADER_BYTES = 60
 
@@ -36,23 +36,35 @@ class Fragment(Packet):
     # of collision, or do it in a better way.
     packet_id_counter: int = 0
 
-    def __init__(self, data: bytearray, /, packet_id: int, seq: int, final: int):
-        if packet_id == 0:
-            raise ValueError("Packet ID of 0 is reserved for unfragmented packets.")
+    def __init__(
+        self,
+        data: bytearray,
+        /,
+        no_header: bool = False,
+        packet_id: int = 0,
+        seq: int = 0,
+        final: int = 0,
+    ):
         if len(data) == 0:
             raise ValueError(
                 "Unexpected data length. Data must be greater than 0 in length."
             )
 
-        if seq > final:
-            raise ValueError("Fragment ID is greater than final fragment ID.")
+        raw = bytearray()
+        if not no_header:
+            if packet_id == 0:
+                raise ValueError("Packet ID of 0 is reserved for unfragmented packets.")
 
-        self.data = bytearray()
-        self.data.extend(packet_id.to_bytes(4, byteorder="little"))
-        self.data.extend(seq.to_bytes(2, byteorder="little"))
-        self.data.extend(final.to_bytes(2, byteorder="little"))
+            if seq > final:
+                raise ValueError("Fragment ID is greater than final fragment ID.")
 
-        self.data.extend(data)
+            raw.extend(packet_id.to_bytes(4, byteorder="little"))
+            raw.extend(seq.to_bytes(2, byteorder="little"))
+            raw.extend(final.to_bytes(2, byteorder="little"))
+
+        raw.extend(data)
+
+        super().__init__(raw, no_header=True)
 
     def get_header(self):
         return self.data[0:8]
@@ -94,7 +106,7 @@ class Fragment(Packet):
 
         offset = 0
         counter = 0
-        final = int(packet.get_data_size() / effective_mtu)
+        final = math.ceil(packet.get_data_size() / effective_mtu)
 
         if final > 65535:  # 2byte unsigned integer max.
             raise PacketTooLarge("Packet is too large to be fragmented properly.")
@@ -148,3 +160,13 @@ class Fragment(Packet):
         if Fragment.packet_id_counter > 4294967295:  # 4 byte unsigned int max.
             Fragment.packet_id_counter = 1
         return Fragment.packet_id_counter
+
+    @staticmethod
+    def create_from_raw_data(data: bytearray) -> Union[Fragment, Packet]:
+        """
+        Helper function which calls the right constructor for a
+        """
+        if int.from_bytes(data[0:4], byteorder="little", signed=False) == 0:
+            return Packet(data, no_header=True)
+
+        return Fragment(data, no_header=True)
