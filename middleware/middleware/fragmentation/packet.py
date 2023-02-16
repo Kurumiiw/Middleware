@@ -7,10 +7,15 @@ class Packet:
     Represents a base instance of a packet.
     """
 
-    # Current header format:
-    # Byte 1-4: Packet ID. Used for distinguishing
-    # Byte 5-6: Fragment ID.
-    # Byte 7-8: Max fragment ID. If 0, packet is not fragmented.
+    # Header format:
+    # Byte 1-4: If 0, indicates unfragmented packet with data at bytes 5+
+    #           If non-zero, indicates part of fragmented package.
+
+    # If fragment:
+    # Byte 5-6: Fragment id in packet.
+    # Byte 7-8: Final fragment id in sequence.
+    # Byte 9+: Data.
+
     def __init__(self, data: bytearray, no_header: bool = False):
         if len(data) == 0:
             raise ValueError(
