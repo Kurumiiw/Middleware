@@ -1,4 +1,6 @@
 from socket import *
+from middleware.fragmentation.packet import *
+from middleware.fragmentation.fragment import *
 import threading
 class MiddlewareAPI():
 
@@ -33,7 +35,9 @@ class MiddlewareReliable():
         self.socko.connect(address)
 
     def send(self, data: bytes) -> None:
-        self.socko.send(data)
+        pack = Packet(data)
+        for i in pack.fragment(self.MTU):
+            self.socko.send(i.get_data())
 
     def listen(self, backlog: int = 5) -> None:
         self.socko.listen(backlog)
@@ -75,17 +79,49 @@ class MiddlewareUnreliable():
         self.socko.setsockopt(SOL_SOCKET, SO_RCVBUF, self.bufferSize)
         self.socko.setsockopt(SOL_SOCKET, SO_SNDBUF, self.bufferSize)
         self.socko.settimeout(self.timeout)
+        self.fragmentsDict = {}
 
     def send(self, data: bytes, address: tuple[str, int]) -> None:
-        self.socko.sendto(data, address)
+        pack = Packet(data)
+        for i in Fragment.fragment(pack, self.MTU):
+            print(i.data)
+            self.socko.sendto(i.data, address)
 
     def bind(self) -> None:
         self.socko.bind((self.ip, self.port))
 
     def receive(self) -> tuple[bytes, tuple[str, int]]:
-        data, address = self.socko.recvfrom(self.MTU)
-        return data, address
-    
+        #TODO: Implement a timeout
+        while True:
+            data, address = self.socko.recvfrom(self.MTU)
+            print(data)
+            
+            ### Replace this with a built in function of packet
+            if int.from_bytes(data[0:4], byteorder="little", signed=False) == 0:
+                print("Complete packet received")
+                return data, address
+            else: 
+                print("Fragment received")
+                pack = Fragment(b"a", 1, 1, 1)
+                pack.data = data
+
+
+            if (address, pack.get_packet_id()) not in self.fragmentsDict:
+                self.fragmentsDict[(address, pack.get_packet_id())] = [pack]
+                print(f"Fragment {pack.get_fragment_number()} received. Total fragments: {len(self.fragmentsDict[(address, pack.get_packet_id())])}")
+            else:
+                self.fragmentsDict[(address, pack.get_packet_id())].append(pack)
+                print(f"Fragment {pack.get_fragment_number()} received. Total fragments: {len(self.fragmentsDict[(address, pack.get_packet_id())])}")
+
+            if len(self.fragmentsDict[(address, pack.get_packet_id())]) == pack.get_last_fragment_number():
+                print("All fragments received. Reassembling...")
+                print(f"Total fragments: {len(self.fragmentsDict[(address, pack.get_packet_id())])}")
+
+                reassembledPacket = Fragment.reassemble(self.fragmentsDict[(address, pack.get_packet_id())])
+                del self.fragmentsDict[(address, pack.get_packet_id())]
+                print("Reassembled packet")
+                return reassembledPacket.get_data(), address
+
     def bind(self) -> None:
         self.socko.bind((self.ip, self.port))
 
@@ -96,6 +132,18 @@ class MiddlewareUnreliable():
         self.socko.shutdown(SHUT_RDWR)
         self.socko.close()
         
+
+
+if __name__ == "__main__":
+    mw = MiddlewareAPI.unreliable("", 5000, TOS = 0x8, MTU = 150, timeout=10, bufferSize=1024*10)
+    mw2 = MiddlewareAPI.unreliable("", 5005, TOS = 0x8, MTU = 150, timeout=10, bufferSize=1024*10)
+    mw2.bind()
+    mw.bind()
+    mw.send(b"Hello there"*80, ("localhost", 5005))
+    receivedData = mw2.receive()
+    print(receivedData)
+    
+
 
 
     
