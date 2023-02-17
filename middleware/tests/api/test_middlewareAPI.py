@@ -1,5 +1,3 @@
-# with open("middleware\tests\api\among-us-dance.gif", "rb") as testGif:
-#     exec(testGif.read())
 from middleware.middlewareAPI import *
 
 def test_create_MiddlewareReliable():
