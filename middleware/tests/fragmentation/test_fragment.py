@@ -102,4 +102,3 @@ def test_no_fragmentation():
 
     assert len(fragments) == 1
     assert not isinstance(fragments[0], Fragment)
-
