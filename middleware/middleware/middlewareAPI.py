@@ -2,31 +2,49 @@ from socket import *
 from middleware.fragmentation.packet import *
 from middleware.fragmentation.fragment import *
 import threading
+import time
 class MiddlewareAPI():
 
     @staticmethod
-    def reliable(ip, port, TOS = 0, MTU= 1500, timeout = 0.5, maxRetries = 5, bufferSize = 1024):
-        return MiddlewareReliable(ip, port, TOS, MTU, timeout, maxRetries, bufferSize)
+    def reliable(ip:str, 
+                 port:int, 
+                 TOS:int = 0, 
+                 MTU:int = 1500, 
+                 timeout:float = 0.5, 
+                 maxRetries:int = 5
+        ) -> "MiddlewareReliable":
+        return MiddlewareReliable(ip, port, TOS, MTU, timeout, maxRetries)
     
     @staticmethod
-    def unreliable(ip, port, TOS = 0, MTU= 1500, timeout = 0.5, maxRetries = 5, bufferSize = 1024):
-        return MiddlewareUnreliable(ip, port, TOS, MTU, timeout, maxRetries, bufferSize)
+    def unreliable(ip:str, 
+                   port:int, 
+                   TOS:int = 0, 
+                   MTU:int = 1500, 
+                   timeout:float = 0.5, 
+                   maxRetries:int = 5
+        ) -> "MiddlewareUnreliable":
+        return MiddlewareUnreliable(ip, port, TOS, MTU, timeout, maxRetries)
     
 
 class MiddlewareReliable():
-    def __init__(self, ip, port, TOS = 0, MTU= 1500, timeout = 0.5, maxRetries = 5, bufferSize = 1024, sock = None):
+    def __init__(self,
+                  ip:str, 
+                  port:int, 
+                  TOS:int = 0, 
+                  MTU:int = 1500, 
+                  timeout:float = 0.5, 
+                  maxRetries:int = 5, 
+                  sock = None
+        ):
         self.ip = ip
         self.port = port
         self.TOS = TOS
         self.MTU = MTU
         self.timeout = timeout
         self.maxRetries = maxRetries
-        self.bufferSize = bufferSize
         if sock is None:
             self.socko = socket(AF_INET, SOCK_STREAM)
             self.socko.setsockopt(IPPROTO_IP, IP_TOS, self.TOS)
-            self.socko.setsockopt(SOL_SOCKET, SO_RCVBUF, self.bufferSize)
-            self.socko.setsockopt(SOL_SOCKET, SO_SNDBUF, self.bufferSize)
             self.socko.settimeout(self.timeout)
         else:
             self.socko = sock
@@ -61,65 +79,66 @@ class MiddlewareReliable():
         return self.socko.recv(self.MTU)
     
         
-    
-    
-    
-
 class MiddlewareUnreliable():
-    def __init__(self, ip:str, port:int, TOS:int = 0, MTU:int = 1500, timeout:float = 0.5, maxRetries:int = 5, bufferSize:int = 1024):
+    def __init__(
+            self, 
+            ip:str, 
+            port:int, 
+            TOS:int = 0, 
+            MTU:int = 1500, 
+            timeout:float = 0.5, 
+            maxRetries:int = 5
+        ):
         self.ip = ip
         self.port = port
         self.TOS = TOS
         self.MTU = MTU
         self.timeout = timeout
+        self.fragmentTimeout = 2 #TODO: Change this with config file
         self.maxRetries = maxRetries
-        self.bufferSize = bufferSize
         self.socko = socket(AF_INET, SOCK_DGRAM)
         self.socko.setsockopt(IPPROTO_IP, IP_TOS, self.TOS)
-        self.socko.setsockopt(SOL_SOCKET, SO_RCVBUF, self.bufferSize)
-        self.socko.setsockopt(SOL_SOCKET, SO_SNDBUF, self.bufferSize)
         self.socko.settimeout(self.timeout)
-        self.fragmentsDict = {}
+        self.fragmentsDict = {} # {(address, packetID): [[packets], time]}
 
-    def send(self, data: bytes, address: tuple[str, int]) -> None:
+    def send(self, 
+             data: bytes, 
+             address: tuple[str, int]
+        ) -> None:
         pack = Packet(data)
         for i in Fragment.fragment(pack, self.MTU):
-            print(i.data)
             self.socko.sendto(i.data, address)
 
     def bind(self) -> None:
         self.socko.bind((self.ip, self.port))
 
     def receive(self) -> tuple[bytes, tuple[str, int]]:
-        #TODO: Implement a timeout
         while True:
             data, address = self.socko.recvfrom(self.MTU)
-            print(data)
-            
-            ### Replace this with a built in function of packet
-            if int.from_bytes(data[0:4], byteorder="little", signed=False) == 0:
-                print("Complete packet received")
-                return data, address
-            else: 
-                print("Fragment received")
-                pack = Fragment(b"a", 1, 1, 1)
-                pack.data = data
+            pack = Fragment.create_from_raw_data(data)
 
+            if not pack.is_fragment(): #Complete packet received
+                if self.fragmentsDict: #Check fragments for timeout
+                    for i in list(self.fragmentsDict):
+                        if self.fragmentsDict[i][1] < time.time() - self.fragmentTimeout:
+                            del self.fragmentsDict[i]
+                return pack.get_data(), address
 
-            if (address, pack.get_packet_id()) not in self.fragmentsDict:
-                self.fragmentsDict[(address, pack.get_packet_id())] = [pack]
-                print(f"Fragment {pack.get_fragment_number()} received. Total fragments: {len(self.fragmentsDict[(address, pack.get_packet_id())])}")
-            else:
-                self.fragmentsDict[(address, pack.get_packet_id())].append(pack)
-                print(f"Fragment {pack.get_fragment_number()} received. Total fragments: {len(self.fragmentsDict[(address, pack.get_packet_id())])}")
+            if (address, pack.get_packet_id()) not in self.fragmentsDict: #New fragment
+                self.fragmentsDict[(address, pack.get_packet_id())] = [[pack], time.time()]
+                #Check other fragments for timeout
+                for i in list(self.fragmentsDict):
+                    if i[0] == address and i[1] == pack.get_packet_id():
+                        continue
+                    if self.fragmentsDict[i][1] < time.time() - self.fragmentTimeout:
+                        del self.fragmentsDict[i]
+            else: #Fragment already in dict
+                self.fragmentsDict[(address, pack.get_packet_id())][0].append(pack)
+                self.fragmentsDict[(address, pack.get_packet_id())][1] = time.time() #Update timeout time
 
-            if len(self.fragmentsDict[(address, pack.get_packet_id())]) == pack.get_last_fragment_number():
-                print("All fragments received. Reassembling...")
-                print(f"Total fragments: {len(self.fragmentsDict[(address, pack.get_packet_id())])}")
-
-                reassembledPacket = Fragment.reassemble(self.fragmentsDict[(address, pack.get_packet_id())])
+            if len(self.fragmentsDict[(address, pack.get_packet_id())][0]) == pack.get_last_fragment_number(): #All fragments received
+                reassembledPacket = Fragment.reassemble(self.fragmentsDict[(address, pack.get_packet_id())][0])
                 del self.fragmentsDict[(address, pack.get_packet_id())]
-                print("Reassembled packet")
                 return reassembledPacket.get_data(), address
 
     def bind(self) -> None:
@@ -135,13 +154,19 @@ class MiddlewareUnreliable():
 
 
 if __name__ == "__main__":
-    mw = MiddlewareAPI.unreliable("", 5000, TOS = 0x8, MTU = 150, timeout=10, bufferSize=1024*10)
-    mw2 = MiddlewareAPI.unreliable("", 5005, TOS = 0x8, MTU = 150, timeout=10, bufferSize=1024*10)
+    def sendDelayed():
+        time.sleep(4)
+        print(mw2.fragmentsDict)
+        mw.send(b"Bababoi", ("localhost", 5005))
+    mw = MiddlewareAPI.unreliable("", 5000, TOS = 0x8, MTU = 150, timeout=10)
+    mw2 = MiddlewareAPI.unreliable("", 5005, TOS = 0x8, MTU = 150, timeout=10)
     mw2.bind()
     mw.bind()
     mw.send(b"Hello there"*80, ("localhost", 5005))
+    threading.Thread(target=sendDelayed, daemon=True).start() #Change send to skip one fragment to test timeout
     receivedData = mw2.receive()
     print(receivedData)
+    print(mw2.fragmentsDict)
     
 
 
