@@ -24,7 +24,7 @@ class Packet:
 
         self.data = bytearray()
         if not no_header:
-            self.data.extend(bytearray([0, 0, 0, 0]))
+            self.data.extend(bytearray([0, 0, 0]))
 
         self.data.extend(data)
 
@@ -50,19 +50,19 @@ class Packet:
         """
         Returns the header portion of the packet.
         """
-        return self.data[0:4]
+        return self.data[0:3]
 
     def get_packet_id(self) -> int:
         """
         Returns the packet identifier portion of the header.
         """
-        return int.from_bytes(self.get_header()[0:4], byteorder="little", signed=False)
+        return int.from_bytes(self.get_header()[0:3], byteorder="big", signed=False)
 
     def get_data(self) -> bytearray:
         """
         Returns the data portion of the packet.
         """
-        return self.data[4:]
+        return self.data[3:]
 
     def is_fragment(self) -> bool:
         """
