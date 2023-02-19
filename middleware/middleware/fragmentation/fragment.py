@@ -32,8 +32,6 @@ class PacketTooLarge(ValueError):
 
 class Fragment(Packet):
     # Static variable for keeping track of global package id counter.
-    # TODO: Should probably keep a separate counter per service to reduce chance
-    # of collision, or do it in a better way.
     packet_id_counter: int = 0
 
     def __init__(
