@@ -13,7 +13,7 @@ def test_packet_creation():
     p = Packet(SAMPLE_DATA)
 
     assert p.get_data() == SAMPLE_DATA
-    assert p.get_header() == bytearray([0, 0, 0, 0])
+    assert p.get_header() == bytearray([0, 0, 0])
 
 
 def test_create_empty_packet_exception():

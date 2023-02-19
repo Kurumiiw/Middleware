@@ -39,9 +39,9 @@ class Fragment(Packet):
         data: bytearray,
         /,
         no_header: bool = False,
+        is_final: bool = False,
         packet_id: int = 0,
         seq: int = 0,
-        final: int = 0,
     ):
         if len(data) == 0:
             raise ValueError(
@@ -53,34 +53,35 @@ class Fragment(Packet):
             if packet_id == 0:
                 raise ValueError("Packet ID of 0 is reserved for unfragmented packets.")
 
-            if seq > final:
-                raise ValueError("Fragment ID is greater than final fragment ID.")
-
-            raw.extend(packet_id.to_bytes(4, byteorder="little"))
-            raw.extend(seq.to_bytes(2, byteorder="little"))
-            raw.extend(final.to_bytes(2, byteorder="little"))
+            raw.extend(packet_id.to_bytes(3, byteorder="big"))
+            tmp = seq | (is_final << 23)
+            raw.extend(tmp.to_bytes(3, byteorder="big"))
 
         raw.extend(data)
 
         super().__init__(raw, no_header=True)
 
     def get_header(self):
-        return self.data[0:8]
+        return self.data[0:6]
 
     def get_data(self):
-        return self.data[8:]
+        return self.data[6:]
+
+    def is_final_fragment(self) -> bool:
+        if (self.get_header()[3] >> 7) & 1:
+            return True
+
+        return False
 
     def get_fragment_number(self) -> int:
         """
         Returns the fragment id portion of the header.
         """
-        return int.from_bytes(self.get_header()[4:6], byteorder="little", signed=False)
-
-    def get_last_fragment_number(self) -> int:
-        """
-        Returns the final fragment id in this sequence.
-        """
-        return int.from_bytes(self.get_header()[6:8], byteorder="little", signed=False)
+        # Ensure the final fragment flag is stripped before converting to integer.
+        return (
+            int.from_bytes(self.get_header()[3:6], byteorder="big", signed=False)
+            & 0b011111111111111111111111
+        )
 
     @staticmethod
     def fragment(
@@ -91,7 +92,7 @@ class Fragment(Packet):
         """
         # TODO: Finding a better way to determine TCP header size would avoid some overhead.
         # Perhaps we can assume that our Middleware makes no packets with additional TCP header options?
-        effective_mtu = mtu - MAX_TCP_HEADER_BYTES - 8
+        effective_mtu = mtu - MAX_TCP_HEADER_BYTES - 6
 
         if effective_mtu <= 0:
             raise EffectiveMTUTooLowException(
@@ -105,19 +106,26 @@ class Fragment(Packet):
 
         offset = 0
         counter = 0
-        final = math.ceil(packet.get_data_size() / effective_mtu)
+        final = int(packet.get_data_size() / effective_mtu)
 
-        if final > 65535:  # 2byte unsigned integer max.
+        if final > 8388608:  # 23 bit unsigned integer max.
             raise PacketTooLarge("Packet is too large to be fragmented properly.")
 
         pid = Fragment.get_next_packet_id()
         while offset < packet.get_data_size():
-            yield Fragment(
-                packet.get_data()[offset : (offset + effective_mtu)],
-                packet_id=pid,
-                seq=counter,
-                final=final,
-            )
+            if counter == final:
+                yield Fragment(
+                    packet.get_data()[offset : (offset + effective_mtu)],
+                    is_final=True,
+                    packet_id=pid,
+                    seq=counter,
+                )
+            else:
+                yield Fragment(
+                    packet.get_data()[offset : (offset + effective_mtu)],
+                    packet_id=pid,
+                    seq=counter,
+                )
 
             offset = offset + effective_mtu
             counter = counter + 1
@@ -125,38 +133,12 @@ class Fragment(Packet):
         return
 
     @staticmethod
-    def reorder(fragments: List[Fragment]) -> List[Fragment]:
-        """
-        Reorders a list of fragments according to their sequence numbers.
-        """
-        return sorted(list(fragments), key=lambda p: p.get_fragment_number())
-
-    @staticmethod
-    def reassemble(fragments: Iterator[Fragment]) -> Packet:
-        """
-        Reassembles a collection of fragments into the original packet. Fragments should
-        contain only fragments from the original packet, but can be unordered.
-        """
-        # Check for missing packets.
-        if len(fragments) != fragments[0].get_last_fragment_number():
-            raise MissingFragmentException(
-                "A packet was missing during attempt at reassembly."
-            )
-
-        result = bytearray()
-
-        for x in Fragment.reorder(list(fragments)):
-            result.extend(x.get_data())
-
-        return Packet(result)
-
-    @staticmethod
     def get_next_packet_id() -> int:
         """
         Increments the global packet id counter and returns the new value.
         """
         Fragment.packet_id_counter = Fragment.packet_id_counter + 1
-        if Fragment.packet_id_counter > 4294967295:  # 4 byte unsigned int max.
+        if Fragment.packet_id_counter > 16777215:  # 3 byte unsigned int max.
             Fragment.packet_id_counter = 1
         return Fragment.packet_id_counter
 
@@ -165,7 +147,7 @@ class Fragment(Packet):
         """
         Helper function which calls the right constructor for a
         """
-        if int.from_bytes(data[0:4], byteorder="little", signed=False) == 0:
+        if int.from_bytes(data[0:3], byteorder="big", signed=False) == 0:
             return Packet(data, no_header=True)
 
         return Fragment(data, no_header=True)

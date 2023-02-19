@@ -22,7 +22,7 @@ class FragmentSequence:
         self.identification: Optional[int] = None
         self.final_fragment_number: Optional[int] = None
 
-        self.fragments: Dict[int, Fragment]
+        self.fragments: Dict[int, Fragment] = {}
 
         self.add_fragment(fragment)
 
@@ -57,7 +57,8 @@ class FragmentSequence:
 
             self.first_unreceived_fragment = id
 
-        # TODO: Check if final fragment in sequence flag is set, and set self.final_fragment_number accordingly.
+        if fragment.is_final_fragment():
+            self.final_fragment_number = fragment.get_fragment_number()
 
     def get_age_in_ms(self) -> int:
         """
@@ -73,7 +74,7 @@ class FragmentSequence:
         if self.final_fragment_number is None:
             return False
 
-        return self.first_unreceived_fragment > self.final_fragment_number()
+        return self.first_unreceived_fragment >= self.final_fragment_number
 
     def reassemble(self) -> Packet:
         if not self.is_complete():
@@ -98,22 +99,16 @@ class FragmentSequence:
 
         for f in fragments:
             if f.is_fragment():  # Reassembly required.
-
+                id = f.get_packet_id()
                 if f.get_packet_id() in FragmentSequence.fragment_sequences.keys():
-                    FragmentSequence.fragment_sequences[f.get_packet_id()].add_fragment(
-                        f
-                    )
+                    FragmentSequence.fragment_sequences[id].add_fragment(f)
                 else:
-                    FragmentSequence.fragment_sequences[
-                        f.get_packet_id()
-                    ] = FragmentSequence(f)
+                    FragmentSequence.fragment_sequences[id] = FragmentSequence(f)
 
-                if FragmentSequence.fragment_sequences[f.get_packet_id()].is_complete():
+                if FragmentSequence.fragment_sequences[id].is_complete():
                     # Reassemble packet.
-                    p = FragmentSequence.fragment_sequences[
-                        f.get_packet_id()
-                    ].reassemble()
-                    FragmentSequence.fragment_sequences.pop(f.get_packet_id())
+                    p = FragmentSequence.fragment_sequences[id].reassemble()
+                    FragmentSequence.fragment_sequences.pop(id)
                     packets.append(p)
             else:  # No reassembly required. Return the packet as is.
                 packets.append(f)
