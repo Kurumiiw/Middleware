@@ -8,6 +8,7 @@ from middleware.fragmentation.fragment import (
     PacketTooLarge,
 )
 
+random.seed(42069)
 SAMPLE_DATA = bytearray([145, 234, 255, 245])
 
 
@@ -63,6 +64,18 @@ def test_missing_fragment():
 
     with pytest.raises(MissingFragmentException):
         Fragment.reassemble(fragments)
+
+
+def test_big_packet_reassembly():
+    data = bytearray(random.randbytes(7919))
+
+    p = Packet(data)
+
+    fragments = list(Fragment.fragment(p, mtu=100))
+
+    p2 = Fragment.reassemble(fragments)
+
+    assert p.data == p2.data
 
 
 def test_low_mtu_exception():
