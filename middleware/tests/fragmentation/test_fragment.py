@@ -95,6 +95,7 @@ def test_create_from_raw_data():
     assert p2.is_fragment()
     assert p2.data == data
 
+
 def test_no_fragmentation():
     p = Packet(SAMPLE_DATA)
 
