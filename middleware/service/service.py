@@ -9,6 +9,7 @@ class ChatService():
         self.name = name
         self.mw = MiddlewareAPI.reliable(address[0], address[1], timeout=None)
         self.mw.bind(self.address)
+        self.active = True
         
 
     def listenForChats(self):
@@ -33,23 +34,35 @@ class ChatService():
         threading.Thread(target=self.receiveMessages, args=(chatmw,), daemon=True).start()
         while True:
             message = input()
-            if message == "exit":
-                chatmw.send(("\nChat ended\n").encode("utf-8"))
-                print("\nChat ended\n")
+            if not self.active:
+                print("Chat ended")
+                exit()
+            try:
+                if message == "exit":
+                    chatmw.send(("\nChat ended\n").encode("utf-8"))
+                    print("\nChat ended\n")
+                    self.close()
+                    break
+                chatmw.send(("\n"+self.name+": "+message+"\n").encode("utf-8"))
+                print("\nYou: "+message+"\n")
+            except OSError:
                 self.close()
                 break
-            chatmw.send(("\n"+self.name+": "+message+"\n").encode("utf-8"))
-            print("\nYou: "+message+"\n")
             
     
     def receiveMessages(self, mw):
-        while True:
-            data = mw.receive().decode("utf-8")
+        while self.active:
+            try:
+                data = mw.receive().decode("utf-8")
+            except ConnectionResetError:
+                self.close()
+                break
             if data != "":
                 # print(data[0] + ": " + data[1])
                 print("\n"+data)
             elif data == "\nChat ended\n":
                 self.close()
+                self.active = False
                 break
 
     def close(self):
