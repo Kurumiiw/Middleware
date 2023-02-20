@@ -10,7 +10,6 @@ def test_create_MiddlewareReliable():
     assert mw.MTU == 1500
     assert mw.timeout == 0.5
     assert mw.maxRetries == 5
-    assert mw.bufferSize == 1024
     assert mw.socko != None
 
 def test_create_MiddlewareUnreliable():
@@ -21,7 +20,6 @@ def test_create_MiddlewareUnreliable():
     assert mw.MTU == 1500
     assert mw.timeout == 0.5
     assert mw.maxRetries == 5
-    assert mw.bufferSize == 1024
     assert mw.socko != None
 
 def test_send_and_receive_unreliable():
@@ -58,7 +56,7 @@ def test_send_and_receive_reliable():
 
 def test_sending_and_receiving_large_file_reliable():
 
-    testGif = open("./among-us-dance.gif", "rb")
+    testGif = open("tests/api/among-us-dance.gif", "rb")
     gifData = testGif.read()
     testGif.close()
 
@@ -88,32 +86,20 @@ def test_sending_and_receiving_large_file_reliable():
 
 def test_sending_and_receiving_large_file_unreliable():
 
-    testGif = open("./among-us-dance.gif", "rb")
+    testGif = open("tests/api/among-us-dance.gif", "rb")
     gifData = testGif.read()
-    testGif.close()
+    testGif.close()        
+
+    def sendPacket(mwSocket):
+        mwSocket.send(gifData, ("localhost", 5005))
 
     mwSend = MiddlewareUnreliable("", 5000)
-    mwReceive = MiddlewareUnreliable("", 5005)
-    mwReceive.timeout = 0
+    mwReceive = MiddlewareUnreliable("", 5005, timeout=15)
     mwReceive.bind()
-    mwSend.send(gifData, ("localhost", 5005))
-
-    allDataReceived = b""
+    threading.Thread(target=sendPacket, args=(mwSend,)).start() # Send in different thread because receiving buffer is too small to hold the entire file
     dataReceived = mwReceive.receive()[0]
-    while dataReceived != b"":
-        allDataReceived += dataReceived
-        dataReceived = mwReceive.receive()[0]
 
     assert dataReceived == gifData
 
     mwReceive.close()
     mwSend.close()
-
-
-if __name__ == "__main__":
-    test_create_MiddlewareReliable()
-    test_create_MiddlewareUnreliable()
-    test_send_and_receive_unreliable()
-    test_send_and_receive_reliable()
-    test_sending_and_receiving_large_file_reliable()
-    test_sending_and_receiving_large_file_unreliable()

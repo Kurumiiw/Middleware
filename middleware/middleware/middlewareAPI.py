@@ -3,7 +3,37 @@ from middleware.fragmentation.packet import *
 from middleware.fragmentation.fragment import *
 import threading
 import time
-class MiddlewareAPI():
+
+
+class InvalidIPException(ValueError):
+    """
+    Raised when an invalid IP is provided.
+    """
+
+    pass
+
+class InvalidPortException(ValueError):
+    """
+    Raised when an invalid port is provided.
+    """
+
+    pass
+
+class InvalidMTUException(ValueError):
+    """
+    Raised when an invalid MTU is provided.
+    """
+
+    pass
+
+class InvalidTOSException(ValueError):
+    """
+    Raised when an invalid TOS is provided.
+    """
+
+    pass
+
+class MiddlewareAPI():           
 
     @staticmethod
     def reliable(ip:str, 
@@ -13,6 +43,7 @@ class MiddlewareAPI():
                  timeout:float = 0.5, 
                  maxRetries:int = 5
         ) -> "MiddlewareReliable":
+        MiddlewareAPI.validate_fields(ip, port, MTU, TOS)
         return MiddlewareReliable(ip, port, TOS, MTU, timeout, maxRetries)
     
     @staticmethod
@@ -23,7 +54,23 @@ class MiddlewareAPI():
                    timeout:float = 0.5, 
                    maxRetries:int = 5
         ) -> "MiddlewareUnreliable":
+        MiddlewareAPI.validate_fields(ip, port, MTU, TOS)
         return MiddlewareUnreliable(ip, port, TOS, MTU, timeout, maxRetries)
+
+    @staticmethod
+    def validate_fields(ip:str, port:int, MTU:int, TOS:int) -> None:
+        if ip != "": # If the IP is not empty, validate it
+            try:
+                inet_aton(ip)
+            except OSError:
+                raise InvalidIPException("IP must be a valid IPv4 address")
+        
+        if port < 0 or port > 65535:
+            raise InvalidPortException("Port must be a valid port number")
+        if MTU < 68 or MTU > 65535:
+            raise InvalidMTUException("MTU must be a valid MTU number")
+        if TOS < 0 or TOS > 255:
+            raise InvalidTOSException("TOS must be a valid TOS number")
     
 
 class MiddlewareReliable():
@@ -54,7 +101,7 @@ class MiddlewareReliable():
 
     def send(self, data: bytes) -> None:
         pack = Packet(data)
-        for i in pack.fragment(self.MTU):
+        for i in Fragment.fragment(pack, self.MTU):
             self.socko.send(i.get_data())
 
     def listen(self, backlog: int = 5) -> None:
@@ -141,8 +188,6 @@ class MiddlewareUnreliable():
                 del self.fragmentsDict[(address, pack.get_packet_id())]
                 return reassembledPacket.get_data(), address
 
-    def bind(self) -> None:
-        self.socko.bind((self.ip, self.port))
 
     def close(self) -> None:
         """Closes the socket and banishes it from the mortal realm (or plane, if you prefer). 
@@ -150,7 +195,6 @@ class MiddlewareUnreliable():
          \- ChatGPT 2023"""
         self.socko.shutdown(SHUT_RDWR)
         self.socko.close()
-        
 
 
 if __name__ == "__main__":
