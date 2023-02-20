@@ -193,7 +193,6 @@ class MiddlewareUnreliable():
         """Closes the socket and banishes it from the mortal realm (or plane, if you prefer). 
         Use this method to rid your system of any malevolent socket entities and restore order to the world of network programming!
          \- ChatGPT 2023"""
-        self.socko.shutdown(SHUT_RDWR)
         self.socko.close()
 
 

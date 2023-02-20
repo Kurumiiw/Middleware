@@ -39,10 +39,10 @@ def test_send_and_receive_reliable():
         assert conn.receive() == b"Hello there"
         conn.send(b"General Kenobi")
 
-    mwReceive = MiddlewareAPI.reliable("", 5000)
-    mwSend = MiddlewareAPI.reliable("", 5005)
+    mwReceive = MiddlewareAPI.reliable("", 5001)
+    mwSend = MiddlewareAPI.reliable("", 5006)
 
-    mwReceive.bind(("", 5000))
+    mwReceive.bind(("", 5001))
     mwReceive.listen()
     threading.Thread(target=waitForPacket, args=(mwReceive,)).start()
 
