@@ -46,7 +46,7 @@ def test_send_and_receive_reliable():
     mwReceive.listen()
     threading.Thread(target=waitForPacket, args=(mwReceive,)).start()
 
-    mwSend.connect(("localhost", 5000))
+    mwSend.connect(("localhost", 5001))
     mwSend.send(b"Hello there")
     assert mwSend.receive() == b"General Kenobi"
 
