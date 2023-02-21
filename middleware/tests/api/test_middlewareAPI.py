@@ -1,6 +1,7 @@
 # with open("middleware\tests\api\among-us-dance.gif", "rb") as testGif:
 #     exec(testGif.read())
 import pytest
+from socket import *
 from middleware.middlewareAPI import *
 
 
@@ -45,6 +46,10 @@ def test_send_and_receive_reliable():
 
     mwReceive = MiddlewareAPI.reliable("", 5001)
     mwSend = MiddlewareAPI.reliable("", 5006)
+
+    # Workaround for address already in use error causing failed tests when running pytest
+    # multiple times in quick succession.
+    mwReceive.socko.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 
     mwReceive.bind(("", 5001))
     mwReceive.listen()
