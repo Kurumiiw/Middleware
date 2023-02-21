@@ -11,8 +11,8 @@ class FragmentSequence:
     """
 
     def __init__(self, fragment: Fragment):
-        # Used for calculating age.
-        self.creation_time = int(time.time() * 1000)
+        # Used for storing the timestamp at which the last fragment was received.
+        self.last_fragment_received = int(time.time() * 1000)
 
         # Keeps track of the first fragment in the sequence that is still missing.
         self.first_unreceived_fragment: int = 0
@@ -41,6 +41,7 @@ class FragmentSequence:
         if fragment.get_fragment_number() in self.fragments.keys():
             raise ValueError("This packet has already been added to the PartialPacket")
 
+        self.last_fragment_received = int(time.time() * 1000)
         self.fragments[fragment.get_fragment_number()] = fragment
 
         # Update first_unreceived_fragment, marker if necessary
@@ -61,7 +62,7 @@ class FragmentSequence:
         """
         Returns the elapsed time since the first packet in this sequence was processed in ms.
         """
-        return int(time.time() * 1000 - self.creation_time)
+        return int(time.time() * 1000 - self.last_fragment_received)
 
     def is_complete(self) -> bool:
         """
