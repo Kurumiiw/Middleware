@@ -52,7 +52,7 @@ class Packet:
         """
         return self.data[0:3]
 
-    def get_packet_id(self) -> int:
+    def get_identification(self) -> int:
         """
         Returns the packet identifier portion of the header.
         """
@@ -68,4 +68,4 @@ class Packet:
         """
         Checks whether a package is a fragment.
         """
-        return not self.get_packet_id() == 0
+        return not self.get_identification() == 0

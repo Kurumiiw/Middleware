@@ -32,10 +32,10 @@ class FragmentSequence:
         """
         if self.identification is None:
             # Initialize identification, so that future fragments can be verified to belong to this sequence.
-            self.identification = fragment.get_packet_id()
+            self.identification = fragment.get_identification()
 
         # Verify ID
-        if self.identification != fragment.get_packet_id():
+        if self.identification != fragment.get_identification():
             raise ValueError(
                 "Fragment identification does not match existing fragment identifications."
             )
@@ -99,8 +99,8 @@ class FragmentSequence:
 
         for f in fragments:
             if f.is_fragment():  # Reassembly required.
-                id = f.get_packet_id()
-                if f.get_packet_id() in FragmentSequence.fragment_sequences.keys():
+                id = f.get_identification()
+                if f.get_identification() in FragmentSequence.fragment_sequences.keys():
                     FragmentSequence.fragment_sequences[id].add_fragment(f)
                 else:
                     FragmentSequence.fragment_sequences[id] = FragmentSequence(f)
