@@ -33,7 +33,6 @@ class PacketTooLargeException(ValueError):
 
 
 class Fragmenter:
-
     timeout_ms: int = 10000
 
     identification_counter: int = 0

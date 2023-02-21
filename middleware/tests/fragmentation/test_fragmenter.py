@@ -99,7 +99,7 @@ def test_multiple_packets():
     p = sorted(p, key=lambda p: p.get_identification())
     received = sorted(p, key=lambda p: p.get_identification())
 
-    for (a, b) in zip(p, received):
+    for a, b in zip(p, received):
         assert a.data == b.data
 
 
@@ -128,5 +128,5 @@ def test_multiple_packets_2():
 
     assert len(received) == len(p)
 
-    for (a, b) in zip(p, received):
+    for a, b in zip(p, received):
         assert a.data == b.data

@@ -25,6 +25,7 @@ def test_create_MiddlewareUnreliable():
     assert mw.maxRetries == 5
     assert mw.socko != None
 
+
 def test_send_and_receive_unreliable():
     mwSend = MiddlewareUnreliable("", 5000)
     mwReceive = MiddlewareUnreliable("", 5005)
@@ -55,6 +56,7 @@ def test_send_and_receive_reliable():
 
     mwReceive.close()
     mwSend.close()
+
 
 @pytest.mark.slow
 def test_sending_and_receiving_large_file_reliable():
