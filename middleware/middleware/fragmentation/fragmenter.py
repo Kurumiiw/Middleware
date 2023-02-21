@@ -117,9 +117,7 @@ class Fragmenter:
 
                 if Fragmenter.partial_packets[id].is_complete():
                     # Reassemble packet.
-                    p = Fragmenter.partial_packets[id].reassemble()
-                    Fragmenter.partial_packets.pop(id)
-                    packets.append(p)
+                    packets.append(Fragmenter.partial_packets.pop(id).reassemble())
             else:  # No reassembly required. Return the packet as is.
                 packets.append(f)
 
