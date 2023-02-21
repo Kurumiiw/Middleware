@@ -94,3 +94,13 @@ def test_create_from_raw_data():
 
     assert p2.is_fragment()
     assert p2.data == data
+
+
+def test_no_fragmentation():
+    p = Packet(SAMPLE_DATA)
+
+    fragments = tuple(Fragment.fragment(p, mtu=1000))
+
+    assert len(fragments) == 1
+    assert not isinstance(fragments[0], Fragment)
+    assert p.data == fragments[0].data

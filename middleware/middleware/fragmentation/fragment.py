@@ -102,7 +102,8 @@ class Fragment(Packet):
 
         # No need to fragment if size is already < effective_mtu
         if packet.get_size() <= effective_mtu:
-            return iter(packet)
+            yield packet
+            return
 
         offset = 0
         counter = 0
