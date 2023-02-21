@@ -96,8 +96,8 @@ def test_multiple_packets():
 
     assert len(received) == 2
 
-    p = sorted(p, key=lambda p: p.get_packet_id())
-    received = sorted(p, key=lambda p: p.get_packet_id())
+    p = sorted(p, key=lambda p: p.get_identification())
+    received = sorted(p, key=lambda p: p.get_identification())
 
     for (a, b) in zip(p, received):
         assert a.get_header() == b.get_header()

@@ -32,7 +32,7 @@ class PacketTooLarge(ValueError):
 
 class Fragment(Packet):
     # Static variable for keeping track of global package id counter.
-    packet_id_counter: int = 0
+    identification_counter: int = 0
 
     def __init__(
         self,
@@ -40,7 +40,7 @@ class Fragment(Packet):
         /,
         no_header: bool = False,
         is_final: bool = False,
-        packet_id: int = 0,
+        identification: int = 0,
         seq: int = 0,
     ):
         if len(data) == 0:
@@ -50,10 +50,10 @@ class Fragment(Packet):
 
         raw = bytearray()
         if not no_header:
-            if packet_id == 0:
+            if identification == 0:
                 raise ValueError("Packet ID of 0 is reserved for unfragmented packets.")
 
-            raw.extend(packet_id.to_bytes(3, byteorder="big"))
+            raw.extend(identification.to_bytes(3, byteorder="big"))
             tmp = seq | (is_final << 23)
             raw.extend(tmp.to_bytes(3, byteorder="big"))
 
@@ -117,13 +117,13 @@ class Fragment(Packet):
                 yield Fragment(
                     packet.get_data()[offset : (offset + effective_mtu)],
                     is_final=True,
-                    packet_id=pid,
+                    identification=pid,
                     seq=counter,
                 )
             else:
                 yield Fragment(
                     packet.get_data()[offset : (offset + effective_mtu)],
-                    packet_id=pid,
+                    identification=pid,
                     seq=counter,
                 )
 
@@ -137,10 +137,10 @@ class Fragment(Packet):
         """
         Increments the global packet id counter and returns the new value.
         """
-        Fragment.packet_id_counter = Fragment.packet_id_counter + 1
-        if Fragment.packet_id_counter > 16777215:  # 3 byte unsigned int max.
-            Fragment.packet_id_counter = 1
-        return Fragment.packet_id_counter
+        Fragment.identification_counter = Fragment.identification_counter + 1
+        if Fragment.identification_counter > 16777215:  # 3 byte unsigned int max.
+            Fragment.identification_counter = 1
+        return Fragment.identification_counter
 
     @staticmethod
     def create_from_raw_data(data: bytearray) -> Union[Fragment, Packet]:
