@@ -24,7 +24,7 @@ class EffectiveMTUTooLowException(ValueError):
     pass
 
 
-class PacketTooLarge(ValueError):
+class PacketTooLargeException(ValueError):
     """
     Raised when a packet being fragmented is too large to be fragmented.
     """
@@ -67,7 +67,9 @@ class Fragmenter:
         final = math.ceil(packet.get_data_size() / effective_mtu) - 1
 
         if final > 8388608:  # 23 bit unsigned integer max.
-            raise PacketTooLarge("Packet is too large to be fragmented properly.")
+            raise PacketTooLargeException(
+                "Packet is too large to be fragmented properly."
+            )
 
         pid = Fragmenter.get_next_identification()
         while offset < packet.get_data_size():
@@ -119,6 +121,8 @@ class Fragmenter:
             else:  # No reassembly required. Return the packet as is.
                 packets.append(f)
 
+        # Delete any fragments that have timed out.
+        Fragmenter.discard_timeouted_partials()
         return packets
 
     @staticmethod
@@ -150,7 +154,7 @@ class Fragmenter:
         return Fragmenter.timeout_ms
 
     @staticmethod
-    def set_timeout_ms(timeout_ms) -> int:
+    def set_timeout_ms(timeout_ms) -> None:
         """
         Sets the timeout duration in milliseconds.
         """
@@ -160,7 +164,7 @@ class Fragmenter:
         Fragmenter.timeout_ms = timeout_ms
 
     @staticmethod
-    def discard_timeouted_partials() -> int:
+    def discard_timeouted_partials() -> None:
         """
         Discards partial packets which have reached timeout age.
         """

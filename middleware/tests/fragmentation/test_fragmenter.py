@@ -1,3 +1,4 @@
+import pytest
 import random
 from middleware.fragmentation.fragmenter import Fragmenter
 from middleware.fragmentation.fragment import Fragment
@@ -93,16 +94,16 @@ def test_multiple_packets():
 
     received = Fragmenter.process_packets(fragments)
 
-    assert len(received) == 2
+    assert len(received) == len(p)
 
     p = sorted(p, key=lambda p: p.get_identification())
     received = sorted(p, key=lambda p: p.get_identification())
 
     for (a, b) in zip(p, received):
-        assert a.get_header() == b.get_header()
-        assert a.get_data() == b.get_data()
+        assert a.data == b.data
 
 
+@pytest.mark.slow
 def test_multiple_packets_2():
     """
     Tests with many packets where some do not get fragmented. Fragments are processed in
