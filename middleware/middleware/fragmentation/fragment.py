@@ -3,9 +3,6 @@ from middleware.fragmentation.packet import Packet
 
 
 class Fragment(Packet):
-    # Static variable for keeping track of global package id counter.
-    identification_counter: int = 0
-
     def __init__(
         self,
         data: bytearray,
