@@ -32,12 +32,19 @@ class ChatService():
         self.distributeMessage(conn, ("\n"+addr[0]+":"+str(addr[1])+" joined the chat").encode("utf-8"))
         print(f"\n{addr[0]}:{addr[1]} joined the chat\n")
         while True:
-            data = conn.receive().decode("utf-8")
+            try:
+                data = conn.receive().decode("utf-8")
+            except ConnectionResetError:
+                self.hostConnections.remove((conn, addr))
+                self.distributeMessage(conn, ("\n"+addr[0]+":"+str(addr[1])+" left the chat").encode("utf-8"))
+                conn.close()
+                break
             if data != "":
                 print(data)
                 self.distributeMessage(conn, data.encode("utf-8"))
             else:
                 self.hostConnections.remove((conn, addr))
+                self.distributeMessage(conn, ("\n"+addr[0]+":"+str(addr[1])+" left the chat").encode("utf-8"))
                 conn.close()
                 break
 
@@ -58,7 +65,7 @@ class ChatService():
                 else:
                     print("\n"+self.name+": "+message)
                     for conn, addr in self.hostConnections:
-                        conn.send(("\n"+self.name+": "+message).encode("utf-8"))
+                        conn.send(("\n"+self.name+"(you): "+message).encode("utf-8"))
             except Exception as e:
                 print(e)
                 break
@@ -71,6 +78,7 @@ class ChatService():
     def connectToChat(self, address: tuple[str, int]):
         self.mw.connect(address)
         threading.Thread(target=self.receiveMessages, args=(), daemon=True).start()
+        print(f"\nConnected to chat on {address}\n")
         self.sendMessages()
     
     def sendMessages(self):
@@ -82,7 +90,7 @@ class ChatService():
             try:
                 if message == "exit":
                     self.active = False
-                    self.mw.send("Chat ended".encode("utf-8"))
+                    self.mw.send(f"{self.address} left the chat".encode("utf-8"))
                     self.mw.close()
                     exit()
                 else:
@@ -91,33 +99,6 @@ class ChatService():
             except Exception as e:
                 print(e)
                 break
-
-
-    # def listenForConnections(self):
-    #     self.mw.listen()
-    #     while True:
-    #         conn, addr = self.mw.accept()
-    #         self.hostConnections.append((conn, addr))
-    #         print("Connection from "+addr[0]+":"+str(addr[1]))
-    #         threading.Thread(target=self.handleConnection, args=(conn, addr), daemon=True).start()
-    
-    # def handleConnection(self, conn, addr):
-    #     while True:
-    #         data = conn.receive().decode("utf-8")
-    #         if data != "":
-    #             print(data)
-    #         else:
-    #             self.hostConnections.remove((conn, addr))
-    #             conn.close()
-    #             break
-
-    # def listenForChats(self):
-    #     self.mw.listen()
-    #     conn, addr = self.mw.accept()
-    #     self.hostConnections.append((conn, addr))
-    #     threading.Thread(target=self.listenForConnections, args=(conn, addr), daemon=True).start()
-    #     self.enterChat(conn)
-
    
     
     def receiveMessages(self):
@@ -128,7 +109,6 @@ class ChatService():
                 self.close()
                 break
             if data != "":
-                # print(data[0] + ": " + data[1])
                 print("\n"+data)
             elif data == "\nChat ended\n":
                 self.close()
@@ -139,27 +119,15 @@ class ChatService():
         self.mw.close()
 
 if __name__ == "__main__":
-    # name = input("What is your name? ")
-    # address = (input("What is your IP? "), int(input("What is your port? ")))
-    # service = ChatService(name, address)
-    # connectOrListen = input("Do you want to connect to a chat or listen for a connection? ")
-    # if connectOrListen == "connect":
-    #     chatPort = int(input("What is the port of the chat you want to enter? "))
-    #     service.connectToChat(("localhost", chatPort))
-    # elif connectOrListen == "listen":
-    #     service.hostChat()
-    # else:
-    #     print("Invalid input")
-    #     service.close()
     name = input("What is your name? ")
-    address = (input("What is your IP? "), int(input("What is your port? ")))
-    i = input("h or c? ")
+    i = input("Host (h) or connect (c)? ")
     if i == "h":
-
-        service = ChatService(name, ("", 5000))
+        port = int(input("What port do you want to host on?"))
+        service = ChatService(name, ("", port))
         service.hostChat()
     elif i == "c":
-        service = ChatService(name, address)
+        port = int(input("What port do you want to use?"))
+        service = ChatService(name, ("", port))
         hostAddress = (input("Host IP? "), int(input("Host Port? ")))
         service.connectToChat(hostAddress)
             
