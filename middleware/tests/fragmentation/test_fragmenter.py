@@ -1,8 +1,7 @@
-import pytest
 import random
-from middleware.fragmentation.packet import Packet
+from middleware.fragmentation.fragmenter import Fragmenter
 from middleware.fragmentation.fragment import Fragment
-from middleware.fragmentation.fragmentsequence import FragmentSequence
+from middleware.fragmentation.packet import Packet
 
 random.seed(69420)
 
@@ -15,8 +14,8 @@ def test_no_fragmentation():
     """
     p = Packet(bytearray(random.randbytes(20)))
 
-    fragments = list(Fragment.fragment(p))
-    received = FragmentSequence.process_fragments(fragments)
+    fragments = Fragmenter.fragment(p)
+    received = Fragmenter.process_packets(fragments)
 
     assert len(received) == 1
     assert p.get_header() == received[0].get_header()
@@ -29,8 +28,8 @@ def test_simple_reassembly():
     """
     p = Packet(SAMPLE_DATA)
 
-    fragments = list(Fragment.fragment(p))
-    received = FragmentSequence.process_fragments(fragments)
+    fragments = Fragmenter.fragment(p)
+    received = Fragmenter.process_packets(fragments)
 
     assert len(received) == 1
     assert p.get_header() == received[0].get_header()
@@ -44,10 +43,10 @@ def test_shuffled_reassembly():
 
     p = Packet(SAMPLE_DATA)
 
-    fragments = list(Fragment.fragment(p))
+    fragments = Fragmenter.fragment(p)
     random.shuffle(fragments)
 
-    received = FragmentSequence.process_fragments(fragments)
+    received = Fragmenter.process_packets(fragments)
 
     assert len(received) == 1
     assert p.get_header() == received[0].get_header()
@@ -62,14 +61,14 @@ def test_interrupted_reassembly():
 
     p = Packet(SAMPLE_DATA)
 
-    fragments = list(Fragment.fragment(p))
+    fragments = Fragmenter.fragment(p)
     random.shuffle(fragments)
 
-    received = FragmentSequence.process_fragments(fragments[:10])
+    received = Fragmenter.process_packets(fragments[:10])
 
     assert len(received) == 0
 
-    received.extend(FragmentSequence.process_fragments(fragments[10:]))
+    received.extend(Fragmenter.process_packets(fragments[10:]))
 
     assert len(received) == 1
     assert p.get_header() == received[0].get_header()
@@ -88,11 +87,11 @@ def test_multiple_packets():
 
     fragments = []
     for x in p:
-        fragments.extend(Fragment.fragment(x))
+        fragments.extend(Fragmenter.fragment(x))
 
     random.shuffle(fragments)
 
-    received = FragmentSequence.process_fragments(fragments)
+    received = Fragmenter.process_packets(fragments)
 
     assert len(received) == 2
 
@@ -103,27 +102,28 @@ def test_multiple_packets():
         assert a.get_header() == b.get_header()
         assert a.get_data() == b.get_data()
 
+
 def test_multiple_packets_2():
     """
     Tests with many packets where some do not get fragmented. Fragments are processed in
     several batches. Should constitute a realistic scenario.
     """
     p: list[Packet] = []
-    for i in range(1, 10000, 25):
+    for i in range(1, 100000, 50):
         p.append(Packet(bytearray(random.randbytes(i))))
 
     fragments = []
     for x in p:
-        fragments.extend(Fragment.fragment(x))
-    
+        fragments.extend(Fragmenter.fragment(x))
+
     received: list[Packet] = []
 
     offset = 0
     while offset < len(fragments):
-        received.extend(FragmentSequence.process_fragments(fragments[offset:(offset+20)]))
+        received.extend(Fragmenter.process_packets(fragments[offset : (offset + 20)]))
         offset = offset + 20
 
-    received = sorted(received, key = lambda p: len(p.data))
+    received = sorted(received, key=lambda p: len(p.data))
 
     assert len(received) == len(p)
 

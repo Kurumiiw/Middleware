@@ -1,12 +1,7 @@
 import pytest
 import random
 from middleware.fragmentation.packet import Packet
-from middleware.fragmentation.fragment import (
-    Fragment,
-    MissingFragmentException,
-    EffectiveMTUTooLowException,
-    PacketTooLarge,
-)
+from middleware.fragmentation.fragment import Fragment
 
 random.seed(42069)
 SAMPLE_DATA = bytearray([145, 234, 255, 245])
@@ -33,11 +28,3 @@ def test_constructor_validation():
 
     with pytest.raises(ValueError):
         Fragment(SAMPLE_DATA, identification=0, seq=0)
-
-
-def test_fragmentation():
-    p = Packet(SAMPLE_DATA)
-
-    fragments = list(Fragment.fragment(p, mtu=67))
-
-    assert len(fragments) == 4

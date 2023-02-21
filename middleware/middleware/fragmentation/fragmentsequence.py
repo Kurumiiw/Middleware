@@ -10,9 +10,6 @@ class FragmentSequence:
     This class is intended for collecting fragments for reassembly.
     """
 
-    # Static variable used to collect incomplete fragments.
-    fragment_sequences: Dict[int, FragmentSequence] = {}
-
     def __init__(self, fragment: Fragment):
         # Used for calculating age.
         self.creation_time = int(time.time() * 1000)
@@ -87,30 +84,3 @@ class FragmentSequence:
             data = data + f.get_data()
 
         return Packet(data)
-
-    @staticmethod
-    def process_fragments(fragments: List[Union[Packet, Fragment]]) -> List[Packet]:
-        """
-        Processes fragments and packets. Partial packets will be kept track of in a dictionary
-        until they can be completed or are discarded due to timeout. Packets and reassembled
-        sequences will be returned as a list.
-        """
-        packets = []
-
-        for f in fragments:
-            if f.is_fragment():  # Reassembly required.
-                id = f.get_identification()
-                if f.get_identification() in FragmentSequence.fragment_sequences.keys():
-                    FragmentSequence.fragment_sequences[id].add_fragment(f)
-                else:
-                    FragmentSequence.fragment_sequences[id] = FragmentSequence(f)
-
-                if FragmentSequence.fragment_sequences[id].is_complete():
-                    # Reassemble packet.
-                    p = FragmentSequence.fragment_sequences[id].reassemble()
-                    FragmentSequence.fragment_sequences.pop(id)
-                    packets.append(p)
-            else:  # No reassembly required. Return the packet as is.
-                packets.append(f)
-
-        return packets
