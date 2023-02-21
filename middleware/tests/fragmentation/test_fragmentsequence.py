@@ -102,3 +102,30 @@ def test_multiple_packets():
     for (a, b) in zip(p, received):
         assert a.get_header() == b.get_header()
         assert a.get_data() == b.get_data()
+
+def test_multiple_packets_2():
+    """
+    Tests with many packets where some do not get fragmented. Fragments are processed in
+    several batches. Should constitute a realistic scenario.
+    """
+    p: list[Packet] = []
+    for i in range(1, 10000, 25):
+        p.append(Packet(bytearray(random.randbytes(i))))
+
+    fragments = []
+    for x in p:
+        fragments.extend(Fragment.fragment(x))
+    
+    received: list[Packet] = []
+
+    offset = 0
+    while offset < len(fragments):
+        received.extend(FragmentSequence.process_fragments(fragments[offset:(offset+20)]))
+        offset = offset + 20
+
+    received = sorted(received, key = lambda p: len(p.data))
+
+    assert len(received) == len(p)
+
+    for (a, b) in zip(p, received):
+        assert a.data == b.data

@@ -106,7 +106,7 @@ class Fragment(Packet):
 
         offset = 0
         counter = 0
-        final = int(packet.get_data_size() / effective_mtu)
+        final = math.ceil(packet.get_data_size() / effective_mtu) -1
 
         if final > 8388608:  # 23 bit unsigned integer max.
             raise PacketTooLarge("Packet is too large to be fragmented properly.")
