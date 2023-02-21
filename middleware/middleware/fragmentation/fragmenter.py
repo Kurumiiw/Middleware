@@ -1,4 +1,5 @@
 from __future__ import annotations
+import time
 from typing import Union
 from middleware.fragmentation.fragmentsequence import FragmentSequence
 from middleware.fragmentation.packet import Packet
@@ -34,6 +35,8 @@ class PacketTooLargeException(ValueError):
 
 class Fragmenter:
     timeout_ms: int = 10000
+
+    last_timeout_cleanup: int = 0
 
     identification_counter: int = 0
 
@@ -167,6 +170,12 @@ class Fragmenter:
         """
         Discards partial packets which have reached timeout age.
         """
+        # Check to ensure that cleanup doesn't occur to quickly after the previous one.
+        if time.time() - Fragmenter.last_timeout_cleanup >= 2:
+            return
+
+        Fragmenter.last_timeout_cleanup = time.time()
+
         for key in Fragmenter.partial_packets.keys():
             if (
                 Fragmenter.partial_packets[key].get_age_in_ms()
