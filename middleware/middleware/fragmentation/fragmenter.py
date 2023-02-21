@@ -34,6 +34,8 @@ class PacketTooLarge(ValueError):
 
 class Fragmenter:
 
+    timeout_ms: int = 10000
+
     identification_counter: int = 0
 
     # Used for keeping track of partially assembled packets.
@@ -139,3 +141,32 @@ class Fragmenter:
             return Packet(data, no_header=True)
 
         return Fragment(data, no_header=True)
+
+    @staticmethod
+    def get_timeout_ms() -> int:
+        """
+        Gets the timeout duration in milliseconds.
+        """
+        return Fragmenter.timeout_ms
+
+    @staticmethod
+    def set_timeout_ms(timeout_ms) -> int:
+        """
+        Sets the timeout duration in milliseconds.
+        """
+        if timeout_ms <= 0:
+            raise ValueError("Timeout must be a positive number.")
+
+        Fragmenter.timeout_ms = timeout_ms
+
+    @staticmethod
+    def discard_timeouted_partials() -> int:
+        """
+        Discards partial packets which have reached timeout age.
+        """
+        for key in Fragmenter.partial_packets.keys():
+            if (
+                Fragmenter.partial_packets[key].get_age_in_ms()
+                >= Fragmenter.get_timeout_ms()
+            ):
+                Fragmenter.partial_packets.pop(key)
