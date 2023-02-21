@@ -132,7 +132,8 @@ class Fragmenter:
     @staticmethod
     def create_from_raw_data(data: bytearray) -> Union[Fragment, Packet]:
         """
-        Helper function which calls the right constructor for a
+        Helper function which calls the right constructor to create either
+        a packet or a fragment, from a list of raw data.
         """
         if int.from_bytes(data[0:3], byteorder="big", signed=False) == 0:
             return Packet(data, no_header=True)
