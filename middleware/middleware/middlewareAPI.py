@@ -1,6 +1,7 @@
 from socket import *
 from middleware.fragmentation.packet import *
 from middleware.fragmentation.fragment import *
+from middleware.fragmentation.fragmenter import Fragmenter
 import threading
 import time
 
@@ -107,7 +108,7 @@ class MiddlewareReliable:
 
     def send(self, data: bytes) -> None:
         pack = Packet(data)
-        for i in Fragment.fragment(pack, self.MTU):
+        for i in Fragmenter.fragment(pack, self.MTU):
             self.socko.send(i.get_data())
 
     def listen(self, backlog: int = 5) -> None:
@@ -156,7 +157,7 @@ class MiddlewareUnreliable:
 
     def send(self, data: bytes, address: tuple[str, int]) -> None:
         pack = Packet(data)
-        for i in Fragment.fragment(pack, self.MTU):
+        for i in Fragmenter.fragment(pack, self.MTU):
             self.socko.sendto(i.data, address)
 
     def bind(self) -> None:
@@ -165,47 +166,12 @@ class MiddlewareUnreliable:
     def receive(self) -> tuple[bytes, tuple[str, int]]:
         while True:
             data, address = self.socko.recvfrom(self.MTU)
-            pack = Fragment.create_from_raw_data(data)
+            pack = Fragmenter.create_from_raw_data(data)
 
-            if not pack.is_fragment():  # Complete packet received
-                if self.fragmentsDict:  # Check fragments for timeout
-                    for i in list(self.fragmentsDict):
-                        if (
-                            self.fragmentsDict[i][1]
-                            < time.time() - self.fragmentTimeout
-                        ):
-                            del self.fragmentsDict[i]
-                return pack.get_data(), address
+            received = Fragmenter.process_packets([pack])
 
-            if (
-                address,
-                pack.get_packet_id(),
-            ) not in self.fragmentsDict:  # New fragment
-                self.fragmentsDict[(address, pack.get_packet_id())] = [
-                    [pack],
-                    time.time(),
-                ]
-                # Check other fragments for timeout
-                for i in list(self.fragmentsDict):
-                    if i[0] == address and i[1] == pack.get_packet_id():
-                        continue
-                    if self.fragmentsDict[i][1] < time.time() - self.fragmentTimeout:
-                        del self.fragmentsDict[i]
-            else:  # Fragment already in dict
-                self.fragmentsDict[(address, pack.get_packet_id())][0].append(pack)
-                self.fragmentsDict[(address, pack.get_packet_id())][
-                    1
-                ] = time.time()  # Update timeout time
-
-            if (
-                len(self.fragmentsDict[(address, pack.get_packet_id())][0])
-                == pack.get_last_fragment_number()
-            ):  # All fragments received
-                reassembledPacket = Fragment.reassemble(
-                    self.fragmentsDict[(address, pack.get_packet_id())][0]
-                )
-                del self.fragmentsDict[(address, pack.get_packet_id())]
-                return reassembledPacket.get_data(), address
+            if len(received) == 1:
+                return received[0].get_data(), address
 
     def close(self) -> None:
         """Closes the socket and banishes it from the mortal realm (or plane, if you prefer).
