@@ -1,5 +1,6 @@
 # with open("middleware\tests\api\among-us-dance.gif", "rb") as testGif:
 #     exec(testGif.read())
+import pytest
 from middleware.middlewareAPI import *
 
 
@@ -23,7 +24,6 @@ def test_create_MiddlewareUnreliable():
     assert mw.timeout == 0.5
     assert mw.maxRetries == 5
     assert mw.socko != None
-
 
 def test_send_and_receive_unreliable():
     mwSend = MiddlewareUnreliable("", 5000)
@@ -56,7 +56,7 @@ def test_send_and_receive_reliable():
     mwReceive.close()
     mwSend.close()
 
-
+@pytest.mark.slow
 def test_sending_and_receiving_large_file_reliable():
     testGif = open("tests/api/among-us-dance.gif", "rb")
     gifData = testGif.read()
@@ -87,6 +87,7 @@ def test_sending_and_receiving_large_file_reliable():
     mwSend.close()
 
 
+@pytest.mark.slow
 def test_sending_and_receiving_large_file_unreliable():
     testGif = open("tests/api/among-us-dance.gif", "rb")
     gifData = testGif.read()
