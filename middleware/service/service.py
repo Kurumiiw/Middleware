@@ -1,16 +1,15 @@
 from middleware.middlewareAPI import *
 
-class ChatService():
 
+class ChatService:
     def __init__(self, name: str, address: tuple[str, int]):
-
         self.hostConnections = []
         self.address = address
         self.name = name
         self.mw = MiddlewareAPI.reliable(address[0], address[1], timeout=None)
         self.mw.bind(self.address)
         self.active = True
-    
+
     def hostChat(self):
         """
         Hosts a chat, listens for an initail connection, then starts a thread to listen for more connections
@@ -21,9 +20,10 @@ class ChatService():
         conn, addr = self.mw.accept()
         self.hostConnections.append(conn)
         threading.Thread(target=self.listenForConnections, daemon=True).start()
-        threading.Thread(target=self.handleConnection, args=(conn, addr), daemon=True).start()
+        threading.Thread(
+            target=self.handleConnection, args=(conn, addr), daemon=True
+        ).start()
         self.hostSendMessages()
-        
 
     def listenForConnections(self):
         """
@@ -33,20 +33,30 @@ class ChatService():
             self.mw.listen()
             conn, addr = self.mw.accept()
             self.hostConnections.append(conn)
-            threading.Thread(target=self.handleConnection, args=(conn, addr), daemon=True).start()
+            threading.Thread(
+                target=self.handleConnection, args=(conn, addr), daemon=True
+            ).start()
 
     def handleConnection(self, conn, addr):
         """
         Handles a connection, listens for messages and sends them to the other connections
         """
-        self.distributeMessage(conn, ("\n"+addr[0]+":"+str(addr[1])+" joined the chat").encode("utf-8"))
+        self.distributeMessage(
+            conn,
+            ("\n" + addr[0] + ":" + str(addr[1]) + " joined the chat").encode("utf-8"),
+        )
         print(f"\n{addr[0]}:{addr[1]} joined the chat\n")
         while True:
             try:
                 data = conn.receive().decode("utf-8")
             except ConnectionResetError:
                 self.hostConnections.remove(conn)
-                self.distributeMessage(conn, ("\n"+addr[0]+":"+str(addr[1])+" left the chat").encode("utf-8"))
+                self.distributeMessage(
+                    conn,
+                    ("\n" + addr[0] + ":" + str(addr[1]) + " left the chat").encode(
+                        "utf-8"
+                    ),
+                )
                 conn.close()
                 break
             if data != "":
@@ -54,7 +64,12 @@ class ChatService():
                 self.distributeMessage(conn, data.encode("utf-8"))
             else:
                 self.hostConnections.remove(conn)
-                self.distributeMessage(conn, ("\n"+addr[0]+":"+str(addr[1])+" left the chat").encode("utf-8"))
+                self.distributeMessage(
+                    conn,
+                    ("\n" + addr[0] + ":" + str(addr[1]) + " left the chat").encode(
+                        "utf-8"
+                    ),
+                )
                 conn.close()
                 break
 
@@ -76,13 +91,15 @@ class ChatService():
                     self.mw.close()
                     exit()
                 else:
-                    print("\n"+self.name+": "+message)
+                    print("\n" + self.name + ": " + message)
                     for conn in self.hostConnections:
-                        conn.send(("\n"+self.name+"(you): "+message).encode("utf-8"))
+                        conn.send(
+                            ("\n" + self.name + "(you): " + message).encode("utf-8")
+                        )
             except Exception as e:
                 print(e)
                 break
-    
+
     def distributeMessage(self, senderConn, data):
         """
         Sends a message to all connections except the sender
@@ -100,7 +117,7 @@ class ChatService():
         threading.Thread(target=self.receiveMessages, args=(), daemon=True).start()
         print(f"\nConnected to chat on {address}\n")
         self.sendMessages()
-    
+
     def sendMessages(self):
         """
         Sends messages to the host
@@ -118,13 +135,12 @@ class ChatService():
                     self.mw.close()
                     exit()
                 else:
-                    print("\n"+self.name+": "+message)
-                    self.mw.send(("\n"+self.name+": "+message).encode("utf-8"))
+                    print("\n" + self.name + ": " + message)
+                    self.mw.send(("\n" + self.name + ": " + message).encode("utf-8"))
             except Exception as e:
                 print(e)
                 break
-   
-    
+
     def receiveMessages(self):
         """
         Receives messages from the host
@@ -136,7 +152,7 @@ class ChatService():
                 self.close()
                 break
             if data != "":
-                print("\n"+data)
+                print("\n" + data)
             elif data == "\nChat ended\n":
                 self.close()
                 self.active = False
@@ -144,6 +160,7 @@ class ChatService():
 
     def close(self):
         self.mw.close()
+
 
 if __name__ == "__main__":
     name = input("Choose username: ")
@@ -160,9 +177,3 @@ if __name__ == "__main__":
         if hostIP == "":
             hostIP = "localhost"
         service.connectToChat((hostIP, hostPort))
-            
-
-
-
-    
-
