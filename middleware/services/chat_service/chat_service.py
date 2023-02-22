@@ -1,5 +1,6 @@
 from middleware.middlewareAPI import *
 
+
 class ChatService:
     def __init__(self, name: str, address: tuple[str, int]):
         self.hostConnections = []
