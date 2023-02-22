@@ -8,13 +8,15 @@ class Packet:
     """
 
     # Header format:
-    # Byte 1-4: If 0, indicates unfragmented packet with data at bytes 5+
+    # Byte 1-3: If 0, indicates unfragmented packet with data at bytes 5+
     #           If non-zero, indicates part of fragmented package.
 
     # If fragment:
-    # Byte 5-6: Fragment id in packet.
-    # Byte 7-8: Final fragment id in sequence.
-    # Byte 9+: Data.
+    # Byte 4-6: Fragment id in packet. First bit indicates if the fragment is the final
+    # in the sequence
+
+    # See also the diagram in #17 for a graphical representation:
+    # https://github.com/Kurumiiw/Middleware/issues/17
 
     def __init__(
         self, data: bytearray, *, source: Tuple[str, int], no_header: bool = False

@@ -39,14 +39,17 @@ class Fragment(Packet):
         return self.data[6:]
 
     def is_final_fragment(self) -> bool:
+        """
+        Returns true if the fragment is the final fragment in the sequence.
+        """
         if (self.get_header()[3] >> 7) & 1:
             return True
 
         return False
 
-    def get_fragment_number(self) -> int:
+    def get_sequence_number(self) -> int:
         """
-        Returns the fragment id portion of the header.
+        Returns the fragment sequence number.
         """
         # Ensure the final fragment flag is stripped before converting to integer.
         return (

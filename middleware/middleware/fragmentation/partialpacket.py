@@ -1,11 +1,11 @@
 from __future__ import annotations
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, Optional, Tuple
 import time
 from middleware.fragmentation.fragment import Fragment
 from middleware.fragmentation.packet import Packet
 
 
-class FragmentSequence:
+class PartialPacket:
     """
     This class is intended for collecting fragments for reassembly.
     """
@@ -33,7 +33,11 @@ class FragmentSequence:
             self.identification = fragment.get_identification()
 
         if self.source is None:
+            # Sets source based on first packet.
             self.source = fragment.source
+
+        if fragment.source != self.source:
+            raise ValueError("Source address does not match existing fragment source.")
 
         # Verify ID
         if self.identification != fragment.get_identification():
@@ -42,14 +46,14 @@ class FragmentSequence:
             )
 
         # Check that fragment doesn't already exist
-        if fragment.get_fragment_number() in self.fragments.keys():
+        if fragment.get_sequence_number() in self.fragments.keys():
             raise ValueError("This packet has already been added to the PartialPacket")
 
         self.last_fragment_received = int(time.time() * 1000)
-        self.fragments[fragment.get_fragment_number()] = fragment
+        self.fragments[fragment.get_sequence_number()] = fragment
 
         # Update first_unreceived_fragment, marker if necessary
-        if fragment.get_fragment_number() == self.first_unreceived_fragment:
+        if fragment.get_sequence_number() == self.first_unreceived_fragment:
             id = self.first_unreceived_fragment + 1
             while True:
                 if not (id in self.fragments.keys()):
@@ -60,9 +64,9 @@ class FragmentSequence:
             self.first_unreceived_fragment = id
 
         if fragment.is_final_fragment():
-            self.final_fragment_number = fragment.get_fragment_number()
+            self.final_fragment_number = fragment.get_sequence_number()
 
-    def get_age_in_ms(self) -> int:
+    def get_time_since_last_fragment_received_ms(self) -> int:
         """
         Returns the elapsed time since the first packet in this sequence was processed in ms.
         """
@@ -86,10 +90,11 @@ class FragmentSequence:
 
         if self.source is None:
             raise Exception(
-                "Source was found to be undefined during reassembly. This should be impossible! What did you do? ( ͠° ͟ʖ ͡° )"
+                "Source address was found to be undefined during reassembly. This should be impossible for a complete packet! What did you do? ( ͠° ͟ʖ ͡° )"
             )
+
         data = bytearray()
-        for f in sorted(self.fragments.values(), key=lambda p: p.get_fragment_number()):
+        for f in sorted(self.fragments.values(), key=lambda p: p.get_sequence_number()):
             data = data + f.get_data()
 
         return Packet(data, source=self.source)

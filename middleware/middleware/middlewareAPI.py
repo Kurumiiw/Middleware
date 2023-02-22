@@ -176,7 +176,7 @@ class MiddlewareUnreliable:
     def close(self) -> None:
         """Closes the socket and banishes it from the mortal realm (or plane, if you prefer).
         Use this method to rid your system of any malevolent socket entities and restore order to the world of network programming!
-         \- ChatGPT 2023"""
+         - ChatGPT 2023"""
         self.socko.close()
 
 
@@ -198,24 +198,3 @@ if __name__ == "__main__":
     receivedData = mw2.receive()
     print(receivedData)
     print(mw2.fragmentsDict)
-
-
-# if __name__ == "__main__":
-#     def test(mwSocket):
-#         conn, addr = mwSocket.accept()
-#         print(conn)
-#         print(conn.receive())
-#         conn.send(b"General Kenobi")
-#     mw = MiddlewareAPI.reliable("", 5000, TOS = 0x5)
-#     mw2 = MiddlewareAPI.reliable("", 5005, TOS = 0x5)
-#     mw.bind(("", 5000))
-#     mw.listen()
-#     threading.Thread(target=test, args=(mw,)).start()
-#     mw2.connect(("localhost", 5000))
-#     mw2.send(b"Hello there")
-#     print(mw2.receive())
-
-
-#     print(mw)
-#     mw.close()
-#     mw2.close()

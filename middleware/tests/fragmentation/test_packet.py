@@ -1,5 +1,4 @@
 import pytest
-import random
 from middleware.fragmentation.packet import Packet
 
 

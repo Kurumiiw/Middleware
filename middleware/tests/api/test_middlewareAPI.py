@@ -1,5 +1,3 @@
-# with open("middleware\tests\api\among-us-dance.gif", "rb") as testGif:
-#     exec(testGif.read())
 import pytest
 from socket import *
 from middleware.middlewareAPI import *
