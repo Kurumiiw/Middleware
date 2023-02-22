@@ -107,7 +107,7 @@ class MiddlewareReliable:
         self.socko.connect(address)
 
     def send(self, data: bytes) -> None:
-        pack = Packet(data)
+        pack = Packet(data, source=(self.ip, self.port))
         for i in Fragmenter.fragment(pack, self.MTU):
             self.socko.send(i.get_data())
 
@@ -156,7 +156,7 @@ class MiddlewareUnreliable:
         self.fragmentsDict = {}  # {(address, packetID): [[packets], time]}
 
     def send(self, data: bytes, address: tuple[str, int]) -> None:
-        pack = Packet(data)
+        pack = Packet(data, source=(self.ip, self.port))
         for i in Fragmenter.fragment(pack, self.MTU):
             self.socko.sendto(i.data, address)
 
@@ -166,7 +166,7 @@ class MiddlewareUnreliable:
     def receive(self) -> tuple[bytes, tuple[str, int]]:
         while True:
             data, address = self.socko.recvfrom(self.MTU)
-            pack = Fragmenter.create_from_raw_data(data)
+            pack = Fragmenter.create_from_raw_data(data, source=address)
 
             received = Fragmenter.process_packets([pack])
 

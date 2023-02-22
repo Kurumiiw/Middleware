@@ -1,10 +1,11 @@
 from __future__ import annotations
 import time
-from typing import Union
+from typing import Tuple, Union
 from middleware.fragmentation.fragmentsequence import FragmentSequence
 from middleware.fragmentation.packet import Packet
 from middleware.fragmentation.fragment import Fragment
 import math
+from collections import defaultdict
 
 MAX_TCP_HEADER_BYTES = 60
 
@@ -41,7 +42,9 @@ class Fragmenter:
     identification_counter: int = 0
 
     # Used for keeping track of partially assembled packets.
-    partial_packets: dict[int, FragmentSequence] = {}
+    partial_packets: defaultdict[
+        Tuple[str, int], dict[int, FragmentSequence]
+    ] = defaultdict(dict)
 
     @staticmethod
     def fragment(packet: Packet, /, mtu=500) -> list[Union[Fragment, Packet]]:
@@ -79,6 +82,7 @@ class Fragmenter:
                 fragments.append(
                     Fragment(
                         packet.get_data()[offset : (offset + effective_mtu)],
+                        source=packet.source,
                         is_final=True,
                         identification=pid,
                         seq=counter,
@@ -88,6 +92,7 @@ class Fragmenter:
                 fragments.append(
                     Fragment(
                         packet.get_data()[offset : (offset + effective_mtu)],
+                        source=packet.source,
                         identification=pid,
                         seq=counter,
                     )
@@ -110,14 +115,19 @@ class Fragmenter:
         for f in fragments:
             if f.is_fragment():  # Reassembly required.
                 id = f.get_identification()
-                if f.get_identification() in Fragmenter.partial_packets.keys():
-                    Fragmenter.partial_packets[id].add_fragment(f)
+                if (
+                    f.get_identification()
+                    in Fragmenter.partial_packets[f.source].keys()
+                ):
+                    Fragmenter.partial_packets[f.source][id].add_fragment(f)
                 else:
-                    Fragmenter.partial_packets[id] = FragmentSequence(f)
+                    Fragmenter.partial_packets[f.source][id] = FragmentSequence(f)
 
-                if Fragmenter.partial_packets[id].is_complete():
+                if Fragmenter.partial_packets[f.source][id].is_complete():
                     # Reassemble packet.
-                    packets.append(Fragmenter.partial_packets.pop(id).reassemble())
+                    packets.append(
+                        Fragmenter.partial_packets[f.source].pop(id).reassemble()
+                    )
             else:  # No reassembly required. Return the packet as is.
                 packets.append(f)
 
@@ -136,15 +146,17 @@ class Fragmenter:
         return Fragmenter.identification_counter
 
     @staticmethod
-    def create_from_raw_data(data: bytearray) -> Union[Fragment, Packet]:
+    def create_from_raw_data(
+        data: bytearray, *, source: Tuple[str, int]
+    ) -> Union[Fragment, Packet]:
         """
         Helper function which calls the right constructor to create either
         a packet or a fragment, from a list of raw data.
         """
         if int.from_bytes(data[0:3], byteorder="big", signed=False) == 0:
-            return Packet(data, no_header=True)
+            return Packet(data, source=source, no_header=True)
 
-        return Fragment(data, no_header=True)
+        return Fragment(data, source=source, no_header=True)
 
     @staticmethod
     def get_timeout_ms() -> int:
