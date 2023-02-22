@@ -52,6 +52,8 @@ def test_send_and_receive_reliable():
     mwReceive.bind(("", 5001))
     mwReceive.listen()
     threading.Thread(target=waitForPacket, args=(mwReceive,)).start()
+    receiveThread = threading.Thread(target=waitForPacket, args=(mwReceive,))
+    receiveThread.start()
 
     mwSend.connect(("localhost", 5001))
     mwSend.send(b"Hello there")
@@ -59,6 +61,7 @@ def test_send_and_receive_reliable():
 
     mwReceive.close()
     mwSend.close()
+    receiveThread.join()
 
 
 @pytest.mark.slow
@@ -79,13 +82,16 @@ def test_sending_and_receiving_large_file_reliable():
 
     mwReceive.bind(("", 5000))
     mwReceive.listen()
-    threading.Thread(target=waitForPacket, args=(mwReceive,)).start()
+    receiveThread = threading.Thread(target=waitForPacket, args=(mwReceive,))
+    receiveThread.start()
 
     mwSend.connect(("localhost", 5000))
     mwSend.send(gifData)
 
     mwReceive.close()
     mwSend.close()
+    receiveThread.join()
+
 
 
 @pytest.mark.slow
@@ -100,12 +106,14 @@ def test_sending_and_receiving_large_file_unreliable():
     mwSend = MiddlewareUnreliable("", 5000)
     mwReceive = MiddlewareUnreliable("", 5005, timeout=15)
     mwReceive.bind()
-    threading.Thread(
+    sendThread = threading.Thread(
         target=sendPacket, args=(mwSend,)
-    ).start()  # Send in different thread because receiving buffer is too small to hold the entire file
+    ) # Send in different thread because receiving buffer is too small to hold the entire file
+    sendThread.start()
     dataReceived = mwReceive.receive()[0]
 
     assert dataReceived == gifData
 
     mwReceive.close()
     mwSend.close()
+    sendThread.join()

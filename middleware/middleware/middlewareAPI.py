@@ -137,7 +137,7 @@ class MiddlewareReliable:
             address = self.socko.getpeername()
             pack = Fragmenter.create_from_raw_data(data, source=address)
             received = Fragmenter.process_packet(pack)
-            print(received)
+            print(len(received))
             if len(received) == 1:
                 return received[0].get_data()
 
