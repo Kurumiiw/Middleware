@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 import time
 from middleware.fragmentation.fragment import Fragment
 from middleware.fragmentation.packet import Packet
@@ -19,6 +19,7 @@ class FragmentSequence:
         self.identification: Optional[int] = None
         self.final_fragment_number: Optional[int] = None
 
+        self.source: Optional[Tuple[str, int]] = None
         self.fragments: Dict[int, Fragment] = {}
 
         self.add_fragment(fragment)
@@ -30,6 +31,9 @@ class FragmentSequence:
         if self.identification is None:
             # Initialize identification, so that future fragments can be verified to belong to this sequence.
             self.identification = fragment.get_identification()
+
+        if self.source is None:
+            self.source = fragment.source
 
         # Verify ID
         if self.identification != fragment.get_identification():
@@ -80,8 +84,12 @@ class FragmentSequence:
                 "This packet is missing fragments and can not be reassembled yet."
             )
 
+        if self.source is None:
+            raise Exception(
+                "Source was found to be undefined during reassembly. This should be impossible! What did you do? ( ͠° ͟ʖ ͡° )"
+            )
         data = bytearray()
         for f in sorted(self.fragments.values(), key=lambda p: p.get_fragment_number()):
             data = data + f.get_data()
 
-        return Packet(data)
+        return Packet(data, source=self.source)

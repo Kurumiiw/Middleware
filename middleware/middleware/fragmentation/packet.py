@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Tuple
 
 
 class Packet:
@@ -15,12 +16,15 @@ class Packet:
     # Byte 7-8: Final fragment id in sequence.
     # Byte 9+: Data.
 
-    def __init__(self, data: bytearray, no_header: bool = False):
+    def __init__(
+        self, data: bytearray, *, source: Tuple[str, int], no_header: bool = False
+    ):
         if len(data) == 0:
             raise ValueError(
                 "Unexpected data length. Data must be greater than 0 in length."
             )
 
+        self.source = source
         self.data = bytearray()
         if not no_header:
             self.data.extend(bytearray([0, 0, 0]))

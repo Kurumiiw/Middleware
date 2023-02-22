@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Tuple
 from middleware.fragmentation.packet import Packet
 
 
@@ -6,7 +7,8 @@ class Fragment(Packet):
     def __init__(
         self,
         data: bytearray,
-        /,
+        *,
+        source: Tuple[str, int],
         no_header: bool = False,
         is_final: bool = False,
         identification: int = 0,
@@ -28,7 +30,7 @@ class Fragment(Packet):
 
         raw.extend(data)
 
-        super().__init__(raw, no_header=True)
+        super().__init__(raw, source=source, no_header=True)
 
     def get_header(self):
         return self.data[0:6]
