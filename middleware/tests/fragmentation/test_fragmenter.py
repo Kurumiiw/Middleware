@@ -1,7 +1,6 @@
 import pytest
 import random
 from middleware.fragmentation.fragmenter import Fragmenter
-from middleware.fragmentation.fragment import Fragment
 from middleware.fragmentation.packet import Packet
 
 random.seed(69420)
@@ -32,9 +31,9 @@ def test_simple_reassembly():
     fragments = Fragmenter.fragment(p)
     received = Fragmenter.process_packets(fragments)
 
-    # assert len(received) == 1
-    # assert p.get_header() == received[0].get_header()
-    # assert p.get_data() == received[0].get_data()
+    assert len(received) == 1
+    assert p.get_header() == received[0].get_header()
+    assert p.get_data() == received[0].get_data()
 
 
 def test_shuffled_reassembly():
