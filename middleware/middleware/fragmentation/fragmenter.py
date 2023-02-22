@@ -104,6 +104,13 @@ class Fragmenter:
         return fragments
 
     @staticmethod
+    def process_packet(fragment: Union[Packet, Fragment]) -> list[Packet]:
+        """
+        Wrapper function to ease the processing of a single packet/fragment.
+        """
+        return Fragmenter.process_packets([fragment])
+
+    @staticmethod
     def process_packets(fragments: list[Union[Packet, Fragment]]) -> list[Packet]:
         """
         Processes fragments and packets. Partial packets will be kept track of in a dictionary

@@ -168,7 +168,7 @@ class MiddlewareUnreliable:
             data, address = self.socko.recvfrom(self.MTU)
             pack = Fragmenter.create_from_raw_data(data, source=address)
 
-            received = Fragmenter.process_packets([pack])
+            received = Fragmenter.process_packet(pack)
 
             if len(received) == 1:
                 return received[0].get_data(), address
