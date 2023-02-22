@@ -3,16 +3,16 @@ from middleware.middlewareAPI import *
 
 class ChatService:
     def __init__(self, name: str, address: tuple[str, int]):
-        self.hostConnections = []
+        self.hostConnections: list[MiddlewareReliable] = []
         self.address = address
         self.name = name
         self.mw = MiddlewareAPI.reliable(address[0], address[1], timeout=None)
         self.mw.bind(self.address)
         self.active = True
 
-    def hostChat(self):
+    def hostChat(self) -> None:
         """
-        Hosts a chat, listens for an initail connection, then starts a thread to listen for more connections
+        Hosts a chat, listens for an inital connection, then starts a thread to listen for more connections
         """
 
         self.mw.listen()
@@ -23,11 +23,11 @@ class ChatService:
         threading.Thread(
             target=self.handleConnection, args=(conn, addr), daemon=True
         ).start()
-        self.hostSendMessages()
+        self.hostSendData()
 
-    def listenForConnections(self):
+    def listenForConnections(self) -> None:
         """
-        Listens for connections and adds them to the list of connections
+        Listens for connections, adds them to the list of connections, and starts a thread to handle them
         """
         while True:
             self.mw.listen()
@@ -37,11 +37,12 @@ class ChatService:
                 target=self.handleConnection, args=(conn, addr), daemon=True
             ).start()
 
-    def handleConnection(self, conn, addr):
+    def handleConnection(self, conn: MiddlewareReliable, addr: tuple[str, int]) -> None:
         """
-        Handles a connection, listens for messages and sends them to the other connections
+        Handles a connection, listens for data and sends them to the other connections.
+        Prints the received data to the console.
         """
-        self.distributeMessage(
+        self.distributeData(
             conn,
             ("\n" + addr[0] + ":" + str(addr[1]) + " joined the chat").encode("utf-8"),
         )
@@ -51,7 +52,7 @@ class ChatService:
                 data = conn.receive().decode("utf-8")
             except ConnectionResetError:
                 self.hostConnections.remove(conn)
-                self.distributeMessage(
+                self.distributeData(
                     conn,
                     ("\n" + addr[0] + ":" + str(addr[1]) + " left the chat").encode(
                         "utf-8"
@@ -61,10 +62,10 @@ class ChatService:
                 break
             if data != "":
                 print(data)
-                self.distributeMessage(conn, data.encode("utf-8"))
+                self.distributeData(conn, data.encode("utf-8"))
             else:
                 self.hostConnections.remove(conn)
-                self.distributeMessage(
+                self.distributeData(
                     conn,
                     ("\n" + addr[0] + ":" + str(addr[1]) + " left the chat").encode(
                         "utf-8"
@@ -73,9 +74,9 @@ class ChatService:
                 conn.close()
                 break
 
-    def hostSendMessages(self):
+    def hostSendData(self) -> None:
         """
-        Sends messages to the other connections
+        Sends data from the host to the other connections, and prints the data to the console.
         """
         while True:
             message = input()
@@ -100,27 +101,27 @@ class ChatService:
                 print(e)
                 break
 
-    def distributeMessage(self, senderConn, data):
+    def distributeData(self, senderConn: MiddlewareReliable, data: bytes) -> None:
         """
-        Sends a message to all connections except the sender
+        Sends data to all connections except the sender (senderConn)
         """
 
         for conn in self.hostConnections:
             if conn != senderConn:
                 conn.send(data)
 
-    def connectToChat(self, address: tuple[str, int]):
+    def connectToChat(self, address: tuple[str, int]) -> None:
         """
-        Connects to a hosted chat
+        Connects to a hosted chat and starts a thread to listen for data.
         """
         self.mw.connect(address)
-        threading.Thread(target=self.receiveMessages, args=(), daemon=True).start()
+        threading.Thread(target=self.receiveData, args=(), daemon=True).start()
         print(f"\nConnected to chat on {address}\n")
-        self.sendMessages()
+        self.sendData()
 
-    def sendMessages(self):
+    def sendData(self) -> None:
         """
-        Sends messages to the host
+        Sends text input in the form of bytes to the host
         """
         while True:
             message = input()
@@ -141,39 +142,64 @@ class ChatService:
                 print(e)
                 break
 
-    def receiveMessages(self):
+    def receiveData(self) -> bytes:
         """
-        Receives messages from the host
+        Receives data from the host
+        """
+        try:
+            data = self.mw.receive()
+            return data
+        except ConnectionResetError:
+            self.close()
+
+    def printMessage(self, message: str) -> None:
+        """
+        Prints a message
+        """
+        print(message)
+
+    def receive_and_print_messages(self) -> None:
+        """
+        Receives data, decodes the data into str, and prints the message.
         """
         while self.active:
-            try:
-                data = self.mw.receive().decode("utf-8")
-            except ConnectionResetError:
-                self.close()
-                break
-            if data != "":
-                print("\n" + data)
+            data = self.receiveData()
+            message = data.decode("utf-8")
+            if message != "":
+                self.printMessage(message)
             elif data == "\nChat ended\n":
                 self.close()
                 self.active = False
                 break
 
-    def close(self):
+    def close(self) -> None:
+        """
+        Closes the connection
+        """
         self.mw.close()
 
 
 if __name__ == "__main__":
     name = input("Choose username: ")
     i = input("Host (h) or connect (c)? ")
-    if i == "h":
+    if i == "h" or i == "H":
         port = int(input("What port do you want to host on?"))
+        while port < 0 or port > 65535:
+            print("Invalid port")
+            port = int(input("What port do you want to host on?"))
         service = ChatService(name, ("", port))
         service.hostChat()
-    elif i == "c":
+    elif i == "c" or i == "C":
         port = int(input("What port do you want to use?"))
+        while port < 0 or port > 65535:
+            print("Invalid port")
+            port = int(input("What port do you want to host on?"))
         service = ChatService(name, ("", port))
         hostIP = input("Host IP? ")
         hostPort = int(input("Host Port? "))
+        while hostPort < 0 or port > 65535:
+            print("Invalid port")
+            hostPort = int(input("What port do you want to host on?"))
         if hostIP == "":
             hostIP = "localhost"
         service.connectToChat((hostIP, hostPort))
