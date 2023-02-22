@@ -109,7 +109,7 @@ class MiddlewareReliable:
     def send(self, data: bytes) -> None:
         pack = Packet(data, source=(self.ip, self.port))
         for i in Fragmenter.fragment(pack, self.MTU):
-            self.socko.send(i.get_data())
+            self.socko.send(i.data)
 
     def listen(self, backlog: int = 5) -> None:
         self.socko.listen(backlog)
@@ -130,7 +130,16 @@ class MiddlewareReliable:
         self.socko.close()
 
     def receive(self) -> bytes:
-        return self.socko.recv(self.MTU)
+        while True:
+            data = self.socko.recv(self.MTU)
+            if not data:
+                return data
+            address = self.socko.getpeername()
+            pack = Fragmenter.create_from_raw_data(data, source=address)
+            received = Fragmenter.process_packet(pack)
+            print(received)
+            if len(received) == 1:
+                return received[0].get_data()
 
 
 class MiddlewareUnreliable:
@@ -172,6 +181,7 @@ class MiddlewareUnreliable:
 
             if len(received) == 1:
                 return received[0].get_data(), address
+            
 
     def close(self) -> None:
         """Closes the socket and banishes it from the mortal realm (or plane, if you prefer).

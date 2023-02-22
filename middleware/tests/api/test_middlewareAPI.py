@@ -69,14 +69,10 @@ def test_sending_and_receiving_large_file_reliable():
 
     def waitForPacket(mwSocket):
         conn, addr = mwSocket.accept()
-        allReceivedData = b""
-        receivedData = conn.receive()
-
-        while receivedData != b"":
-            allReceivedData += receivedData
-            receivedData = conn.receive()
-
-        assert allReceivedData == gifData
+        allReceived = b""
+        while allReceived == b"":
+            allReceived = conn.receive()
+        assert allReceived == gifData
 
     mwReceive = MiddlewareAPI.reliable("", 5000)
     mwSend = MiddlewareAPI.reliable("", 5005)

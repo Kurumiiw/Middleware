@@ -99,7 +99,11 @@ class Fragmenter:
         """
         Wrapper function to ease the processing of a single packet/fragment.
         """
-        return Fragmenter.process_packets([fragment])
+        result = Fragmenter.process_packets([fragment])
+        if len(result) > 1:
+            #This should never happen.
+            raise Exception("Fragmenter.process_packet() returned more than one packet.") 
+        return result
 
     @staticmethod
     def process_packets(fragments: list[Union[Packet, Fragment]]) -> list[Packet]:
