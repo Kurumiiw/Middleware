@@ -158,7 +158,7 @@ class ChatService:
         """
         print(message)
 
-    def receive_and_print_messages(self) -> None:
+    def receiveAndPrintMessages(self) -> None:
         """
         Receives data, decodes the data into str, and prints the message.
         """
