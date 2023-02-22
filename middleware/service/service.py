@@ -12,6 +12,10 @@ class ChatService():
         self.active = True
     
     def hostChat(self):
+        """
+        Hosts a chat, listens for an initail connection, then starts a thread to listen for more connections
+        """
+
         self.mw.listen()
         print(f"\nWaiting for connections on {self.address}...\n")
         conn, addr = self.mw.accept()
@@ -22,6 +26,9 @@ class ChatService():
         
 
     def listenForConnections(self):
+        """
+        Listens for connections and adds them to the list of connections
+        """
         while True:
             self.mw.listen()
             conn, addr = self.mw.accept()
@@ -29,6 +36,9 @@ class ChatService():
             threading.Thread(target=self.handleConnection, args=(conn, addr), daemon=True).start()
 
     def handleConnection(self, conn, addr):
+        """
+        Handles a connection, listens for messages and sends them to the other connections
+        """
         self.distributeMessage(conn, ("\n"+addr[0]+":"+str(addr[1])+" joined the chat").encode("utf-8"))
         print(f"\n{addr[0]}:{addr[1]} joined the chat\n")
         while True:
@@ -49,6 +59,9 @@ class ChatService():
                 break
 
     def hostSendMessages(self):
+        """
+        Sends messages to the other connections
+        """
         while True:
             message = input()
             if not self.active:
@@ -71,17 +84,27 @@ class ChatService():
                 break
     
     def distributeMessage(self, senderConn, data):
+        """
+        Sends a message to all connections except the sender
+        """
+
         for conn in self.hostConnections:
             if conn != senderConn:
                 conn.send(data)
 
     def connectToChat(self, address: tuple[str, int]):
+        """
+        Connects to a hosted chat
+        """
         self.mw.connect(address)
         threading.Thread(target=self.receiveMessages, args=(), daemon=True).start()
         print(f"\nConnected to chat on {address}\n")
         self.sendMessages()
     
     def sendMessages(self):
+        """
+        Sends messages to the host
+        """
         while True:
             message = input()
             if not self.active:
@@ -103,6 +126,9 @@ class ChatService():
    
     
     def receiveMessages(self):
+        """
+        Receives messages from the host
+        """
         while self.active:
             try:
                 data = self.mw.receive().decode("utf-8")
@@ -129,7 +155,6 @@ if __name__ == "__main__":
     elif i == "c":
         port = int(input("What port do you want to use?"))
         service = ChatService(name, ("", port))
-        # hostAddress = (input("Host IP? "), int(input("Host Port? ")))
         hostIP = input("Host IP? ")
         hostPort = int(input("Host Port? "))
         if hostIP == "":
