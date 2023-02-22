@@ -15,7 +15,7 @@ class ChatService():
         self.mw.listen()
         print(f"\nWaiting for connections on {self.address}...\n")
         conn, addr = self.mw.accept()
-        self.hostConnections.append((conn, addr))
+        self.hostConnections.append(conn)
         threading.Thread(target=self.listenForConnections, daemon=True).start()
         threading.Thread(target=self.handleConnection, args=(conn, addr), daemon=True).start()
         self.hostSendMessages()
@@ -25,7 +25,7 @@ class ChatService():
         while True:
             self.mw.listen()
             conn, addr = self.mw.accept()
-            self.hostConnections.append((conn, addr))
+            self.hostConnections.append(conn)
             threading.Thread(target=self.handleConnection, args=(conn, addr), daemon=True).start()
 
     def handleConnection(self, conn, addr):
@@ -35,7 +35,7 @@ class ChatService():
             try:
                 data = conn.receive().decode("utf-8")
             except ConnectionResetError:
-                self.hostConnections.remove((conn, addr))
+                self.hostConnections.remove(conn)
                 self.distributeMessage(conn, ("\n"+addr[0]+":"+str(addr[1])+" left the chat").encode("utf-8"))
                 conn.close()
                 break
@@ -43,7 +43,7 @@ class ChatService():
                 print(data)
                 self.distributeMessage(conn, data.encode("utf-8"))
             else:
-                self.hostConnections.remove((conn, addr))
+                self.hostConnections.remove(conn)
                 self.distributeMessage(conn, ("\n"+addr[0]+":"+str(addr[1])+" left the chat").encode("utf-8"))
                 conn.close()
                 break
@@ -57,21 +57,21 @@ class ChatService():
             try:
                 if message == "exit":
                     self.active = False
-                    for conn, addr in self.hostConnections:
+                    for conn in self.hostConnections:
                         conn.send("Chat ended".encode("utf-8"))
                         conn.close()
                     self.mw.close()
                     exit()
                 else:
                     print("\n"+self.name+": "+message)
-                    for conn, addr in self.hostConnections:
+                    for conn in self.hostConnections:
                         conn.send(("\n"+self.name+"(you): "+message).encode("utf-8"))
             except Exception as e:
                 print(e)
                 break
     
     def distributeMessage(self, senderConn, data):
-        for conn, addr in self.hostConnections:
+        for conn in self.hostConnections:
             if conn != senderConn:
                 conn.send(data)
 
@@ -91,6 +91,7 @@ class ChatService():
                 if message == "exit":
                     self.active = False
                     self.mw.send(f"{self.address} left the chat".encode("utf-8"))
+                    print("Chat ended")
                     self.mw.close()
                     exit()
                 else:
@@ -119,7 +120,7 @@ class ChatService():
         self.mw.close()
 
 if __name__ == "__main__":
-    name = input("What is your name? ")
+    name = input("Choose username: ")
     i = input("Host (h) or connect (c)? ")
     if i == "h":
         port = int(input("What port do you want to host on?"))
@@ -128,8 +129,12 @@ if __name__ == "__main__":
     elif i == "c":
         port = int(input("What port do you want to use?"))
         service = ChatService(name, ("", port))
-        hostAddress = (input("Host IP? "), int(input("Host Port? ")))
-        service.connectToChat(hostAddress)
+        # hostAddress = (input("Host IP? "), int(input("Host Port? ")))
+        hostIP = input("Host IP? ")
+        hostPort = int(input("Host Port? "))
+        if hostIP == "":
+            hostIP = "localhost"
+        service.connectToChat((hostIP, hostPort))
             
 
 
