@@ -110,6 +110,7 @@ class MiddlewareReliable:
         pack = Packet(data, source=(self.ip, self.port))
         for i in Fragmenter.fragment(pack, self.MTU):
             self.socko.send(i.data)
+            time.sleep(0.001)
 
     def listen(self, backlog: int = 5) -> None:
         self.socko.listen(backlog)
@@ -137,7 +138,8 @@ class MiddlewareReliable:
             address = self.socko.getpeername()
             pack = Fragmenter.create_from_raw_data(data, source=address)
             received = Fragmenter.process_packet(pack)
-            print(len(received))
+            print(f"RECEIVED {data}")
+            print(Fragmenter.partial_packets, len(Fragmenter.partial_packets[address]))
             if len(received) == 1:
                 return received[0].get_data()
 

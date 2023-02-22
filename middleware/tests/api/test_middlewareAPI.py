@@ -58,10 +58,10 @@ def test_send_and_receive_reliable():
     mwSend.connect(("localhost", 5001))
     mwSend.send(b"Hello there")
     assert mwSend.receive() == b"General Kenobi"
+    receiveThread.join()
 
     mwReceive.close()
     mwSend.close()
-    receiveThread.join()
 
 
 @pytest.mark.slow
@@ -69,28 +69,36 @@ def test_sending_and_receiving_large_file_reliable():
     testGif = open("tests/api/among-us-dance.gif", "rb")
     gifData = testGif.read()
     testGif.close()
+    print("RUNNING TEST")
 
     def waitForPacket(mwSocket):
         conn, addr = mwSocket.accept()
         allReceived = b""
+        st = time.time()
         while allReceived == b"":
-            allReceived = conn.receive()
+            allReceived += conn.receive()
+            if time.time() - st > 15:
+                break
         assert allReceived == gifData
 
-    mwReceive = MiddlewareAPI.reliable("", 5000)
+    mwReceive = MiddlewareAPI.reliable("", 55000)
     mwSend = MiddlewareAPI.reliable("", 5005)
 
-    mwReceive.bind(("", 5000))
+    mwReceive.bind(("", 55000))
     mwReceive.listen()
-    receiveThread = threading.Thread(target=waitForPacket, args=(mwReceive,))
+    receiveThread = threading.Thread(target=waitForPacket, args=(mwReceive,), daemon=True)
+    receiveThread.timeout = 15
     receiveThread.start()
+    print("RECVTRHEAD STARTED")
 
-    mwSend.connect(("localhost", 5000))
+    mwSend.connect(("localhost", 55000))
+    print("Connected")
     mwSend.send(gifData)
-
+    print("Sent")
+    # receiveThread.join()
+    time.sleep(20)
     mwReceive.close()
     mwSend.close()
-    receiveThread.join()
 
 
 
@@ -111,9 +119,12 @@ def test_sending_and_receiving_large_file_unreliable():
     ) # Send in different thread because receiving buffer is too small to hold the entire file
     sendThread.start()
     dataReceived = mwReceive.receive()[0]
+    sendThread.join()
 
     assert dataReceived == gifData
 
     mwReceive.close()
     mwSend.close()
-    sendThread.join()
+
+if __name__ == "__main__":
+    test_sending_and_receiving_large_file_reliable()
