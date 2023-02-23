@@ -29,8 +29,12 @@ class Packet:
         self.source = source
         self.data = bytearray()
         if not no_header:
-            print(len(data))
-            self.data.extend(bytearray([0, 0]) + (len(data) + 4).to_bytes(2, byteorder="big", signed = False))
+            # We set the length either to the length of the data, or to the maximum length possible, if the packet is too big. If so the packet
+            # should never be sent without fragmenting, but this allows services to send and receive data in bigger chunks than 
+            # 2^16 bytes easily. This should work as long as the fragmenting code runs on every Packet, but will fail silently and
+            # catastrophically if not (the receiver will not be able to deliniate between received packet).
+            # TODO: Better solutions are welcome. Also see #22
+            self.data.extend(bytearray([0, 0]) + min([len(data) + 4, 2**16-1]).to_bytes(2, byteorder="big", signed = False))
 
         self.data.extend(data)
 
