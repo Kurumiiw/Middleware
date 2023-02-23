@@ -1,65 +1,59 @@
-from dataclasses import dataclass
+from .generate_config import *
 import configparser
 
-@dataclass
-class Config:
-    # GivenProperties
-    mtu: int = 500 # Maximum Transmission Unit measured in bytes
-
-    # ExpectedProperties
-
-    # Tuning
-    
-
-class InvalidConfigFormat(ValueError):
-    """
-    Raised when parsing an ill-formatted config file
-    """
+class ConfigParsingError(ValueError):
     pass
 
-def load_config_from_file(file_path: str) -> Config:
-    """
-    Loads and parses a config file, resulting values are stored in the returned Config object.
-    """
-    result_config = Config()
+@generate_config
+class Config:
+    # IMPORTANT: variables have to have a default value
+    _network_properties = None
+    mtu: int = 500
 
-    conf_reader = configparser.ConfigParser()
-    conf_reader.read(file_path)
+    _middleware_configuration = None
+    _system_configuration = None
 
-    sections = set(conf_reader.sections())
-    correct_sections = {"GivenProperties", "ExpectedProperties", "Tuning"}
-    if sections != correct_sections:
-        if sections.issubset(correct_sections):
-            raise InvalidConfigFormat("Invalid config file. Missing sections: {}.".format(", ".join(correct_sections - sections)))
-        elif len(sections - correct_sections) > 0:
-            raise InvalidConfigFormat("Invalid config file. Illegal sections: {}.".format(", ".join(sections - correct_sections)))
+    def get_var(self, var_name: str) -> any:
+        return self.default_generated_get_var(var_name)
+
+    def set_var(self, var_name: str, value: any):
+        return self.default_generated_set_var(var_name, value)
+
+    def load_from_file(self, path: str):
+        section_names = self._section_names
+        var_lists = self._var_lists
+
+        conf_reader = configparser.ConfigParser()
+        conf_reader.read(path)
+
+        if conf_reader.sections() != section_names:
+            raise ConfigParsingError("Invalid sections")
         else:
-            raise InvalidConfigFormat("Invalid config file. Invalid sections.")
-    else:
-        for section in sections:
-            for key in conf_reader[section]:
-                # TODO: verify 'key' is a field in the correct section
-                setattr(result_config, key, conf_reader[section][key])
+            for section_index, section in enumerate(section_names):
+                var_list = var_lists[section_index]
+                
+                if conf_reader.options(section) != var_list:
+                    raise ConfigParsingError("Missing variables")
+                else:
+                    for var in var_list:
+                        self.set_var(var, conf_reader.get(section, var))
 
-    return result_config
+    def save_to_file(self, path: str):
+        section_names = self._section_names
+        var_lists = self._var_lists
 
-def save_config_to_file(config: Config, file_path: str):
-    """
-    Generates an equivalent ini configuration string and saves it to the specified file.
-    """
-    with open(file_path, "w") as config_file:
         conf_writer = configparser.ConfigParser()
 
-        conf_writer.add_section("GivenProperties")
-        # TODO: automate
-        conf_writer.set("GivenProperties", "mtu", str(500))
+        for section in section_names:
+            conf_writer.add_section(section)
 
-        conf_writer.add_section("ExpectedProperties")
+        for section_index, section_var_list in enumerate(var_lists):
+            section = section_names[section_index]
 
-        conf_writer.add_section("Tuning")
+            for var in section_var_list:
+                conf_writer.set(section, var, str(self.get_var(var)))
 
-        conf_writer.write(config_file, space_around_delimiters = True)
+        with open(path, "w") as file_writer:
+            conf_writer.write(file_writer, space_around_delimiters=True)
 
-c = load_config_from_file("example_config.ini")
-print(c)
-save_config_to_file(c, "example_config_out.ini")
+config = Config()
