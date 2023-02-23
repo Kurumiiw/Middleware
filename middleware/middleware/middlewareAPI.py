@@ -135,11 +135,19 @@ class MiddlewareReliable:
             data = self.socko.recv(self.MTU)
             if data == b"":
                 return b""
-            data = self.dataBuffer + data #Add the data from the buffer to the data received
-            data_length = int.from_bytes(data[2:4], byteorder="big", signed = False) #Get the length of the packet
+            data = (
+                self.dataBuffer + data
+            )  # Add the data from the buffer to the data received
+            data_length = int.from_bytes(
+                data[2:4], byteorder="big", signed=False
+            )  # Get the length of the packet
             address = self.socko.getpeername()
-            pack = Fragmenter.create_from_raw_data(data[:data_length], source=address) #Create a packet from the data received
-            self.dataBuffer = data[data_length:] #Add the data that was not part of the packet to the buffer
+            pack = Fragmenter.create_from_raw_data(
+                data[:data_length], source=address
+            )  # Create a packet from the data received
+            self.dataBuffer = data[
+                data_length:
+            ]  # Add the data that was not part of the packet to the buffer
             received = Fragmenter.process_packet(pack)
             if len(received) == 1:
                 return received[0].get_data()
@@ -178,10 +186,17 @@ class MiddlewareUnreliable:
     def receive(self) -> tuple[bytes, tuple[str, int]]:
         while True:
             data, address = self.socko.recvfrom(self.MTU)
-            data = self.dataBuffer + data #Add the data from the buffer to the data received
-            data_length = int.from_bytes(data[2:4], byteorder="big", signed = False) #Get length from header field
-            pack = Fragmenter.create_from_raw_data(data[:data_length], source=address) 
-            self.dataBuffer = data[data_length:] #Add data that was not part of the packet to the buffer
+            # TODO: Data in buffer could be from a different address, so we need to check that
+            data = (
+                self.dataBuffer + data
+            )  # Add the data from the buffer to the data received
+            data_length = int.from_bytes(
+                data[2:4], byteorder="big", signed=False
+            )  # Get length from header field
+            pack = Fragmenter.create_from_raw_data(data[:data_length], source=address)
+            self.dataBuffer = data[
+                data_length:
+            ]  # Add data that was not part of the packet to the buffer
             received = Fragmenter.process_packet(pack)
 
             if len(received) == 1:
