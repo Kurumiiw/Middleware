@@ -96,6 +96,7 @@ class MiddlewareReliable:
         self.MTU = MTU
         self.timeout = timeout
         self.maxRetries = maxRetries
+        self.dataBuffer = bytearray()
         if sock is None:
             self.socko = socket(AF_INET, SOCK_STREAM)
             self.socko.setsockopt(IPPROTO_IP, IP_TOS, self.TOS)
@@ -109,7 +110,7 @@ class MiddlewareReliable:
     def send(self, data: bytes) -> None:
         pack = Packet(data, source=(self.ip, self.port))
         for i in Fragmenter.fragment(pack, self.MTU):
-            self.socko.send(i.get_data())
+            self.socko.send(i.data)
 
     def listen(self, backlog: int = 5) -> None:
         self.socko.listen(backlog)
@@ -130,7 +131,18 @@ class MiddlewareReliable:
         self.socko.close()
 
     def receive(self) -> bytes:
-        return self.socko.recv(self.MTU)
+        while True:
+            data = self.socko.recv(self.MTU)
+            if data == b"":
+                return b""
+            data = self.dataBuffer + data #Add the data from the buffer to the data received
+            data_length = int.from_bytes(data[2:4], byteorder="big", signed = False) #Get the length of the packet
+            address = self.socko.getpeername()
+            pack = Fragmenter.create_from_raw_data(data[:data_length], source=address) #Create a packet from the data received
+            self.dataBuffer = data[data_length:] #Add the data that was not part of the packet to the buffer
+            received = Fragmenter.process_packet(pack)
+            if len(received) == 1:
+                return received[0].get_data()
 
 
 class MiddlewareUnreliable:
@@ -150,10 +162,10 @@ class MiddlewareUnreliable:
         self.timeout = timeout
         self.fragmentTimeout = 2  # TODO: Change this with config file
         self.maxRetries = maxRetries
+        self.dataBuffer = bytearray()
         self.socko = socket(AF_INET, SOCK_DGRAM)
         self.socko.setsockopt(IPPROTO_IP, IP_TOS, self.TOS)
         self.socko.settimeout(self.timeout)
-        self.fragmentsDict = {}  # {(address, packetID): [[packets], time]}
 
     def send(self, data: bytes, address: tuple[str, int]) -> None:
         pack = Packet(data, source=(self.ip, self.port))
@@ -166,8 +178,10 @@ class MiddlewareUnreliable:
     def receive(self) -> tuple[bytes, tuple[str, int]]:
         while True:
             data, address = self.socko.recvfrom(self.MTU)
-            pack = Fragmenter.create_from_raw_data(data, source=address)
-
+            data = self.dataBuffer + data #Add the data from the buffer to the data received
+            data_length = int.from_bytes(data[2:4], byteorder="big", signed = False) #Get length from header field
+            pack = Fragmenter.create_from_raw_data(data[:data_length], source=address) 
+            self.dataBuffer = data[data_length:] #Add data that was not part of the packet to the buffer
             received = Fragmenter.process_packet(pack)
 
             if len(received) == 1:
@@ -184,7 +198,6 @@ if __name__ == "__main__":
 
     def sendDelayed():
         time.sleep(4)
-        print(mw2.fragmentsDict)
         mw.send(b"Bababoi", ("localhost", 5005))
 
     mw = MiddlewareAPI.unreliable("", 5000, TOS=0x8, MTU=150, timeout=10)
@@ -197,4 +210,3 @@ if __name__ == "__main__":
     ).start()  # Change send to skip one fragment to test timeout
     receivedData = mw2.receive()
     print(receivedData)
-    print(mw2.fragmentsDict)
