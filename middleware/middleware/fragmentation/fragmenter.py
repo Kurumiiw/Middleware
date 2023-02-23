@@ -149,9 +149,11 @@ class Fragmenter:
     ) -> Union[Fragment, Packet]:
         """
         Helper function which calls the right constructor to create either
-        a packet or a fragment, from a byte array of raw data.
+        a packet or a fragment, from a byte array of raw data. Note that this
+        function assumes a properly formed header. Length must be set appropriately
+        for the data (See header illustration in #22).
         """
-        if int.from_bytes(data[0:3], byteorder="big", signed=False) == 0:
+        if int.from_bytes(data[0:2], byteorder="big", signed=False) == 0:
             return Packet(data, source=source, no_header=True)
 
         return Fragment(data, source=source, no_header=True)

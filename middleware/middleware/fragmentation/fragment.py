@@ -24,8 +24,8 @@ class Fragment(Packet):
             if identification == 0:
                 raise ValueError("Packet ID of 0 is reserved for unfragmented packets.")
 
-            raw.extend(identification.to_bytes(2, byteorder="big", signed = False))
-            raw.extend(int.to_bytes(7 + len(data), 2, byteorder="big", signed = False))
+            raw.extend(identification.to_bytes(2, byteorder="big", signed=False))
+            raw.extend(int.to_bytes(7 + len(data), 2, byteorder="big", signed=False))
             tmp = seq | (is_final << 23)
             raw.extend(tmp.to_bytes(3, byteorder="big"))
 
