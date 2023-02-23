@@ -24,7 +24,8 @@ class Fragment(Packet):
             if identification == 0:
                 raise ValueError("Packet ID of 0 is reserved for unfragmented packets.")
 
-            raw.extend(identification.to_bytes(3, byteorder="big"))
+            raw.extend(identification.to_bytes(2, byteorder="big", signed = False))
+            raw.extend(int.to_bytes(7 + len(data), 2, byteorder="big", signed = False))
             tmp = seq | (is_final << 23)
             raw.extend(tmp.to_bytes(3, byteorder="big"))
 
@@ -33,16 +34,16 @@ class Fragment(Packet):
         super().__init__(raw, source=source, no_header=True)
 
     def get_header(self):
-        return self.data[0:6]
+        return self.data[0:7]
 
     def get_data(self):
-        return self.data[6:]
+        return self.data[7:]
 
     def is_final_fragment(self) -> bool:
         """
         Returns true if the fragment is the final fragment in the sequence.
         """
-        if (self.get_header()[3] >> 7) & 1:
+        if (self.get_header()[4] >> 7) & 1:
             return True
 
         return False
@@ -53,6 +54,6 @@ class Fragment(Packet):
         """
         # Ensure the final fragment flag is stripped before converting to integer.
         return (
-            int.from_bytes(self.get_header()[3:6], byteorder="big", signed=False)
+            int.from_bytes(self.get_header()[4:7], byteorder="big", signed=False)
             & 0b011111111111111111111111
         )

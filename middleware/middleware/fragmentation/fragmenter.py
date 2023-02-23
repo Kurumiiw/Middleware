@@ -139,7 +139,7 @@ class Fragmenter:
         Increments the global identification counter and returns the new value.
         """
         Fragmenter.identification_counter = Fragmenter.identification_counter + 1
-        if Fragmenter.identification_counter > 16777215:  # 3 byte unsigned int max.
+        if Fragmenter.identification_counter > 65536:  # 2 byte unsigned int max.
             Fragmenter.identification_counter = 1
         return Fragmenter.identification_counter
 

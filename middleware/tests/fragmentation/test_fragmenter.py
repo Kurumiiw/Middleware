@@ -109,7 +109,7 @@ def test_multiple_packets_2():
     Fragments are processed in several batches. Should constitute a realistic scenario.
     """
     p: list[Packet] = []
-    for i in range(1, 100000, 50):
+    for i in range(1, 65000, 50):
         p.append(
             Packet(
                 bytearray(random.randbytes(i)),
