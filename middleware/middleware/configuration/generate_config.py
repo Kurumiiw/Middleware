@@ -1,19 +1,17 @@
+import copy
+
+class ConfigSection:
+    pass
+
 def generate_config(conf_class: type) -> type:
     class Config:
         pass
 
-    variables_to_filter_out = ["get_var", "set_var", "load_from_file", "save_to_file"]
-    variables = [key for key in vars(conf_class)]
+    variables = [key for key in conf_class.__annotations__]
     variables = list(filter(lambda name: not name.startswith("__"), variables))
-    variables = list(filter(lambda name: name not in variables_to_filter_out, variables))
 
-    section_names = ["_network_properties", "_middleware_configuration", "_system_configuration"]
+    section_names = list(filter(lambda name: conf_class.__annotations__[name] == ConfigSection, variables))
     Config._section_names = section_names
-    assert variables[0] == section_names[0], "Missing section marker for NetworkProperties"
-    assert section_names[1] in variables, "Missing section marker for MiddlewareConfiguration"
-    assert section_names[2] in variables, "Missing section marker for SystemConfiguration"
-
-    assert set(conf_class.__annotations__.keys()).issubset(variables), "All configuration variables need a default value"
 
     Config._network_properies_var_list = []
     Config._middleware_configuration_var_list = []
@@ -34,17 +32,9 @@ def generate_config(conf_class: type) -> type:
             var_lists[0].append(var)
 
     for var in filter(lambda name: name not in section_names, variables):
-        setattr(Config, "_"+var, getattr(conf_class, var))
+        setattr(Config, "_"+var, None)
 
-        def get_var(self):
-            return self.get_var(var)
-
-        def set_var(self, value):
-            self.set_var(var, value)
-
-        setattr(Config, "get_"+var, get_var)
-        setattr(Config, "set_"+var, set_var)
-        setattr(Config, var, property(fget=getattr(Config, "get_"+var), fset=getattr(Config, "set_"+var)))
+        setattr(Config, var, property(fget=lambda self, name=var: getattr(self, "_"+name), fset=lambda self, value, name=var: setattr(self, "_"+name, value)))
 
     def default_get_var(self, var):
         return getattr(self, "_"+var)
@@ -60,5 +50,12 @@ def generate_config(conf_class: type) -> type:
 
     Config.load_from_file = conf_class.load_from_file
     Config.save_to_file = conf_class.save_to_file
+
+    def __setattr__(self, key, value):
+        assert key in vars(Config), "Config has no member {}".format(key)
+        object.__setattr__(self, key, value)
+
+    Config.__setattr__ = __setattr__
+
 
     return Config
