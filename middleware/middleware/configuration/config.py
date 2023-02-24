@@ -51,10 +51,9 @@ class Config:
 
     system_configuration: ConfigSection
     # see https://docs.kernel.org/networking/ip-sysctl.html
-    # NOTE: all boolean values are marked as int due to the c type system treating them this way
     tcp_frto: int
-    tcp_reflect_tos: int
-    tcp_sack: int
+    tcp_reflect_tos: bool
+    tcp_sack: bool
 
     def get_var(self, var_name: str) -> any:
         # NOTE: This is just a check to avoid using config variables
@@ -67,7 +66,7 @@ class Config:
         #       to be registered as a variable, so None has to be
         #       replaced with some other value, and the set cannot be
         #       omitted)
-        #assert self.default_generated_get_var(var_name) != None, "Config variables must be set before usage"
+        assert self.default_generated_get_var(var_name) != None, "Config variables must be set before usage"
         return self.default_generated_get_var(var_name)
 
     def set_var(self, var_name: str, value: any):
@@ -96,12 +95,28 @@ class Config:
         else:
             for section_index, section in enumerate(section_names):
                 var_list = var_lists[section_index]
+                var_names = [var.name for var in var_list]
                 
-                if conf_reader.options(section) != var_list:
+                if set(conf_reader.options(section)) != set(var_names):
                     raise ConfigParsingError("Missing variables")
                 else:
                     for var in var_list:
-                        self.set_var(var, conf_reader.get(section, var))
+                        value = conf_reader.get(section, var.name)
+
+                        if var.type == int:
+                            try:
+                                value = int(value)
+                            except:
+                                raise ConfigParsingError("Cannot set {} to {}. Illegal integral value.".format(var.name, value))
+                        elif var.type == bool:
+                            if value == "True": value = True
+                            elif value == "False": value = False
+                            else:
+                                raise ConfigParsingError("Cannot set {} to {}. Illegal boolean value.".format(var.name, value))
+                        else:
+                            assert False, "Not implemented"
+
+                        self.set_var(var.name, value)
 
     def save_to_file(self, path: str):
         section_names = self._section_names
@@ -116,7 +131,7 @@ class Config:
             section = section_names[section_index]
 
             for var in section_var_list:
-                conf_writer.set(section, var, str(self.get_var(var)))
+                conf_writer.set(section, var.name, str(self.get_var(var.name)))
 
         with open(path, "w") as file_writer:
             conf_writer.write(file_writer, space_around_delimiters=True)

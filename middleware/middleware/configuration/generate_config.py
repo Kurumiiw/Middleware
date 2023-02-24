@@ -1,7 +1,9 @@
-import copy
+import collections
 
 class ConfigSection:
     pass
+
+config_var_list_entry = collections.namedtuple("config_var_list_entry", "name type")
 
 def generate_config(conf_class: type) -> type:
     class Config:
@@ -29,12 +31,12 @@ def generate_config(conf_class: type) -> type:
         if var in section_names:
             var_lists = var_lists[1:]
         else:
-            var_lists[0].append(var)
+            var_lists[0].append(config_var_list_entry(var, conf_class.__annotations__[var]))
 
     for var in filter(lambda name: name not in section_names, variables):
         setattr(Config, "_"+var, None)
 
-        setattr(Config, var, property(fget=lambda self, name=var: getattr(self, "_"+name), fset=lambda self, value, name=var: setattr(self, "_"+name, value)))
+        setattr(Config, var, property(fget=lambda self, name=var: self.get_var(name), fset=lambda self, value, name=var: self.set_var(name, value)))
 
     def default_get_var(self, var):
         return getattr(self, "_"+var)
