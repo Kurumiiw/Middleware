@@ -1,9 +1,12 @@
 import collections
 
+
 class ConfigSection:
     pass
 
+
 config_var_list_entry = collections.namedtuple("config_var_list_entry", "name type")
+
 
 def generate_config(conf_class: type) -> type:
     class Config:
@@ -12,7 +15,11 @@ def generate_config(conf_class: type) -> type:
     variables = [key for key in conf_class.__annotations__]
     variables = list(filter(lambda name: not name.startswith("__"), variables))
 
-    section_names = list(filter(lambda name: conf_class.__annotations__[name] == ConfigSection, variables))
+    section_names = list(
+        filter(
+            lambda name: conf_class.__annotations__[name] == ConfigSection, variables
+        )
+    )
     Config._section_names = section_names
 
     Config._network_properies_var_list = []
@@ -22,7 +29,7 @@ def generate_config(conf_class: type) -> type:
     var_lists = [
         Config._network_properies_var_list,
         Config._middleware_configuration_var_list,
-        Config._system_configuration_var_list
+        Config._system_configuration_var_list,
     ]
     Config._var_lists = var_lists
 
@@ -31,20 +38,29 @@ def generate_config(conf_class: type) -> type:
         if var in section_names:
             var_lists = var_lists[1:]
         else:
-            var_lists[0].append(config_var_list_entry(var, conf_class.__annotations__[var]))
+            var_lists[0].append(
+                config_var_list_entry(var, conf_class.__annotations__[var])
+            )
 
     for var in filter(lambda name: name not in section_names, variables):
-        setattr(Config, "_"+var, None)
+        setattr(Config, "_" + var, None)
 
-        setattr(Config, var, property(fget=lambda self, name=var: self.get_var(name), fset=lambda self, value, name=var: self.set_var(name, value)))
+        setattr(
+            Config,
+            var,
+            property(
+                fget=lambda self, name=var: self.get_var(name),
+                fset=lambda self, value, name=var: self.set_var(name, value),
+            ),
+        )
 
     def default_get_var(self, var):
-        return getattr(self, "_"+var)
+        return getattr(self, "_" + var)
 
     def default_set_var(self, var, value):
-        setattr(self, "_"+var, value)
+        setattr(self, "_" + var, value)
 
-    Config.default_generated_get_var =  default_get_var
+    Config.default_generated_get_var = default_get_var
     Config.default_generated_set_var = default_set_var
 
     Config.get_var = conf_class.get_var
@@ -58,6 +74,5 @@ def generate_config(conf_class: type) -> type:
         object.__setattr__(self, key, value)
 
     Config.__setattr__ = __setattr__
-
 
     return Config

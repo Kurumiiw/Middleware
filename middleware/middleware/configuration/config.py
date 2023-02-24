@@ -2,8 +2,10 @@ from .generate_config import *
 import configparser
 import os
 
+
 class ConfigParsingError(ValueError):
     pass
+
 
 @generate_config
 class Config:
@@ -39,6 +41,7 @@ class Config:
     is wanted the 'default_generated_*et_var' is supplied, which just sets/gets
     the variables normally.
     """
+
     network_properties: ConfigSection
     mtu: int
 
@@ -66,7 +69,9 @@ class Config:
         #       to be registered as a variable, so None has to be
         #       replaced with some other value, and the set cannot be
         #       omitted)
-        assert self.default_generated_get_var(var_name) != None, "Config variables must be set before usage"
+        assert (
+            self.default_generated_get_var(var_name) != None
+        ), "Config variables must be set before usage"
         return self.default_generated_get_var(var_name)
 
     def set_var(self, var_name: str, value: any):
@@ -88,15 +93,23 @@ class Config:
         conf_reader.read(path)
 
         if conf_reader.sections() != section_names:
-            if not(set(conf_reader.sections()).issubset(section_names)):
-                raise ConfigParsingError("Invalid sections: {}".format(set(conf_reader.sections()) - set(section_names)))
+            if not (set(conf_reader.sections()).issubset(section_names)):
+                raise ConfigParsingError(
+                    "Invalid sections: {}".format(
+                        set(conf_reader.sections()) - set(section_names)
+                    )
+                )
             else:
-                raise ConfigParsingError("Missing sections: {}".format(set(section_names) - set(conf_reader.sections())))
+                raise ConfigParsingError(
+                    "Missing sections: {}".format(
+                        set(section_names) - set(conf_reader.sections())
+                    )
+                )
         else:
             for section_index, section in enumerate(section_names):
                 var_list = var_lists[section_index]
                 var_names = [var.name for var in var_list]
-                
+
                 if set(conf_reader.options(section)) != set(var_names):
                     raise ConfigParsingError("Missing variables")
                 else:
@@ -107,12 +120,22 @@ class Config:
                             try:
                                 value = int(value)
                             except:
-                                raise ConfigParsingError("Cannot set {} to {}. Illegal integral value.".format(var.name, value))
+                                raise ConfigParsingError(
+                                    "Cannot set {} to {}. Illegal integral value.".format(
+                                        var.name, value
+                                    )
+                                )
                         elif var.type == bool:
-                            if value == "True": value = True
-                            elif value == "False": value = False
+                            if value == "True":
+                                value = True
+                            elif value == "False":
+                                value = False
                             else:
-                                raise ConfigParsingError("Cannot set {} to {}. Illegal boolean value.".format(var.name, value))
+                                raise ConfigParsingError(
+                                    "Cannot set {} to {}. Illegal boolean value.".format(
+                                        var.name, value
+                                    )
+                                )
                         else:
                             assert False, "Not implemented"
 
@@ -135,5 +158,6 @@ class Config:
 
         with open(path, "w") as file_writer:
             conf_writer.write(file_writer, space_around_delimiters=True)
+
 
 config = Config()
