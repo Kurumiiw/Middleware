@@ -6,7 +6,7 @@ def test_illegal_use_before_set():
         print(config.mtu)
 
 def test_load_from_file():
-    config.load_from_file("test_config.ini")
+    config.load_from_file("tests/configuration/test_config.ini")
     assert config.mtu == 512
     assert config.fragment_timeout == 60000
     assert config.expected_congestion == 128
@@ -27,7 +27,7 @@ def test_set_get():
     assert config.expected_jitter == 2
 
 def test_save_to_file():
-    config.save_to_file("test_config_out.ini")
+    config.save_to_file("tests/configuration/test_config_out.ini")
     
     expected_content = """[network_properties]
 mtu = 512
@@ -46,5 +46,5 @@ tcp_sack = True
 
 """
 
-    with open("test_config_out.ini") as reader:
+    with open("tests/configuration/test_config_out.ini", "r") as reader:
         assert reader.read(-1) == expected_content
