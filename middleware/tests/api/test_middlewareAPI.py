@@ -110,3 +110,7 @@ def test_sending_and_receiving_large_file_unreliable():
 
     mwReceive.close()
     mwSend.close()
+
+
+if __name__ == "__main__":
+    test_sending_and_receiving_large_file_reliable()

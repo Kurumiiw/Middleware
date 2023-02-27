@@ -131,26 +131,41 @@ class MiddlewareReliable:
         self.socko.close()
 
     def receive(self) -> bytes:
+        count = 0
         while True:
-            data = self.socko.recv(self.MTU)
-            if data == b"":
-                return b""
+            count = count + 1
+            print("Count: ", count)
+            print("Start get data from buffer")
+            data = self.socko.recv(1024)
+            print("End get data from buffer")
+
             data = (
                 self.dataBuffer + data
             )  # Add the data from the buffer to the data received
+
+            if not data:
+                return None
+
             data_length = int.from_bytes(
                 data[2:4], byteorder="big", signed=False
             )  # Get the length of the packet
-            address = self.socko.getpeername()
-            pack = Fragmenter.create_from_raw_data(
-                data[:data_length], source=address
-            )  # Create a packet from the data received
-            self.dataBuffer = data[
-                data_length:
-            ]  # Add the data that was not part of the packet to the buffer
-            received = Fragmenter.process_packet(pack)
-            if len(received) == 1:
-                return received[0].get_data()
+
+            print("Length: ", data_length)
+            if len(data) >= data_length:
+                address = self.socko.getpeername()
+                pack = Fragmenter.create_from_raw_data(
+                    data[:data_length], source=address
+                )  # Create a packet from the data received
+                print("Seq number: ", pack.get_sequence_number())
+                self.dataBuffer = data[
+                    data_length:
+                ]  # Add the data that was not part of the packet to the buffer
+                received = Fragmenter.process_packet(pack)
+                if len(received) == 1:
+                    print("Test 2")
+                    return received[0].get_data()
+            else:
+                self.dataBuffer = data
 
 
 class MiddlewareUnreliable:
