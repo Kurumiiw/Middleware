@@ -55,7 +55,9 @@ def test_send_and_receive_reliable():
 
     mwSend.connect(("localhost", 5001))
     mwSend.send(b"Hello there")
-    assert mwSend.receive() == b"General Kenobi"
+    received = mwSend.receive()
+    print(received)
+    assert received == b"General Kenobi"
 
     mwReceive.close()
     mwSend.close()
@@ -113,4 +115,5 @@ def test_sending_and_receiving_large_file_unreliable():
 
 
 if __name__ == "__main__":
+    test_send_and_receive_reliable()
     test_sending_and_receiving_large_file_reliable()

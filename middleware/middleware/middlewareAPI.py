@@ -156,7 +156,8 @@ class MiddlewareReliable:
                 pack = Fragmenter.create_from_raw_data(
                     data[:data_length], source=address
                 )  # Create a packet from the data received
-                print("Seq number: ", pack.get_sequence_number())
+                if pack.is_fragment():
+                    print("Seq number: ", pack.get_sequence_number())
                 self.dataBuffer = data[
                     data_length:
                 ]  # Add the data that was not part of the packet to the buffer
