@@ -67,26 +67,23 @@ def test_sending_and_receiving_large_file_reliable():
     gifData = testGif.read()
     testGif.close()
 
-    def waitForPacket(mwSocket):
-        conn, addr = mwSocket.accept()
-        allReceivedData = b""
-        receivedData = conn.receive()
-
-        while allReceivedData == b"":
-            allReceivedData += receivedData
-            receivedData = conn.receive()
-
-        assert allReceivedData == gifData
+    def sendPacket(mwSocket):
+        mwSocket.connect(("localhost", 5000))
+        mwSocket.send(gifData)
 
     mwReceive = MiddlewareAPI.reliable("", 5000)
     mwSend = MiddlewareAPI.reliable("", 5005)
 
     mwReceive.bind(("", 5000))
     mwReceive.listen()
-    threading.Thread(target=waitForPacket, args=(mwReceive,)).start()
+    t = threading.Thread(target=sendPacket, args=(mwSend,))
+    t.start()
 
-    mwSend.connect(("localhost", 5000))
-    mwSend.send(gifData)
+    conn, addr = mwReceive.accept()
+    data = conn.receive()
+    assert data == gifData
+
+    t.join()
 
     mwReceive.close()
     mwSend.close()
