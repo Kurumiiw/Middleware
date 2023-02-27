@@ -186,21 +186,19 @@ class MiddlewareUnreliable:
     def receive(self) -> tuple[bytes, tuple[str, int]]:
         while True:
             data, address = self.socko.recvfrom(self.MTU)
-            # TODO: Data in buffer could be from a different address, so we need to check that
-            data = (
-                self.dataBuffer + data
-            )  # Add the data from the buffer to the data received
-            data_length = int.from_bytes(
-                data[2:4], byteorder="big", signed=False
-            )  # Get length from header field
-            pack = Fragmenter.create_from_raw_data(data[:data_length], source=address)
-            self.dataBuffer = data[
-                data_length:
-            ]  # Add data that was not part of the packet to the buffer
-            received = Fragmenter.process_packet(pack)
+            received = []
+            while data:
+                data_length = int.from_bytes(
+                    data[2:4], byteorder="big", signed=False
+                )  # Get length from header field
+                pack = Fragmenter.create_from_raw_data(
+                    data[:data_length], source=address
+                )
+                received.extend(Fragmenter.process_packet(pack))
+                data = data[data_length:]
 
-            if len(received) == 1:
-                return received[0].get_data(), address
+            if received:
+                return b"".join([i.get_data() for i in received]), address
 
     def close(self) -> None:
         """Closes the socket and banishes it from the mortal realm (or plane, if you prefer).

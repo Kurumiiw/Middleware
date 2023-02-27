@@ -72,7 +72,7 @@ def test_sending_and_receiving_large_file_reliable():
         allReceivedData = b""
         receivedData = conn.receive()
 
-        while receivedData != b"":
+        while allReceivedData == b"":
             allReceivedData += receivedData
             receivedData = conn.receive()
 
