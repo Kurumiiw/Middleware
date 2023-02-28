@@ -111,6 +111,8 @@ class MiddlewareReliable:
         pack = Packet(data, source=(self.ip, self.port))
         for i in Fragmenter.fragment(pack, self.MTU):
             self.socko.send(i.data)
+            if (len(i.data) > self.MTU):
+                print("Fragment too large wtfffff")
 
     def listen(self, backlog: int = 5) -> None:
         self.socko.listen(backlog)
@@ -132,16 +134,22 @@ class MiddlewareReliable:
 
     def receive(self) -> bytes:
         count = 0
+        address = self.socko.getpeername()
         while True:
-            count = count + 1
-            print("Count: ", count)
-            print("Start get data from buffer")
+            
+            # print("Count: ", count)
+            # print("Start get data from buffer")
             data = self.socko.recv(1024)
-            print("End get data from buffer")
+            time.sleep(0.0001)
+            # print("End get data from buffer")
 
             data = (
                 self.dataBuffer + data
             )  # Add the data from the buffer to the data received
+            if count == 3761:
+                print("Count 3761",data)
+            elif count == 3762:
+                print("Count 3762",data)
 
             if not data:
                 return None
@@ -150,22 +158,26 @@ class MiddlewareReliable:
                 data[2:4], byteorder="big", signed=False
             )  # Get the length of the packet
 
-            print("Length: ", data_length)
-            if len(data) >= data_length:
-                address = self.socko.getpeername()
+            # print("Length: ", data_length)
+            while len(data) >= data_length:
+                
                 pack = Fragmenter.create_from_raw_data(
                     data[:data_length], source=address
                 )  # Create a packet from the data received
-                print("Seq number: ", pack.get_sequence_number())
-                self.dataBuffer = data[
-                    data_length:
-                ]  # Add the data that was not part of the packet to the buffer
+                print("Seq number: ", pack.get_sequence_number(), len(data), end=" ")
+                count = pack.get_sequence_number()
+                data = data[data_length:]  # Remove the data that was part of the packet
                 received = Fragmenter.process_packet(pack)
                 if len(received) == 1:
                     print("Test 2")
                     return received[0].get_data()
-            else:
-                self.dataBuffer = data
+                if len(data) < 4: # Remaining data is not enough to get the length of the next packet
+                    break
+                else:
+                    data_length = int.from_bytes(
+                        data[2:4], byteorder="big", signed=False
+                    )
+            self.dataBuffer = data
 
 
 class MiddlewareUnreliable:

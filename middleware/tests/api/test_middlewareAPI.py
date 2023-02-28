@@ -72,7 +72,7 @@ def test_sending_and_receiving_large_file_reliable():
         mwSocket.send(gifData)
 
     mwReceive = MiddlewareAPI.reliable("", 5000)
-    mwSend = MiddlewareAPI.reliable("", 5005)
+    mwSend = MiddlewareAPI.reliable("", 5005, timeout=30)
 
     mwReceive.bind(("", 5000))
     mwReceive.listen()
