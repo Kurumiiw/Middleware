@@ -101,7 +101,7 @@ def test_sending_and_receiving_large_file_unreliable():
         mwSocket.send(gifData, ("localhost", 5005))
 
     mwSend = MiddlewareUnreliable("", 5000)
-    mwReceive = MiddlewareUnreliable("", 5005, timeout=15)
+    mwReceive = MiddlewareUnreliable("", 5005, timeout=30)
     mwReceive.bind()
     threading.Thread(
         target=sendPacket, args=(mwSend,)

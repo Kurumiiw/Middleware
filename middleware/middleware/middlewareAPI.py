@@ -2,6 +2,7 @@ from socket import *
 from middleware.fragmentation.packet import *
 from middleware.fragmentation.fragment import *
 from middleware.fragmentation.fragmenter import Fragmenter
+from collections import defaultdict
 import threading
 import time
 
@@ -155,6 +156,7 @@ class MiddlewareReliable:
                 data = data[data_length:]  # Remove the data that was part of the packet
                 received = Fragmenter.process_packet(pack)
                 if len(received) == 1:
+                    self.dataBuffer = data
                     return received[0].get_data()
                 if len(data) < 4:
                     break  # Remaining data is not enough to get the length of the next packet
@@ -182,7 +184,7 @@ class MiddlewareUnreliable:
         self.timeout = timeout
         self.fragmentTimeout = 2  # TODO: Change this with config file
         self.maxRetries = maxRetries
-        self.dataBuffer = bytearray()
+        self.dataBuffer: defaultdict[tuple[str, int], bytearray] = defaultdict(bytearray)
         self.socko = socket(AF_INET, SOCK_DGRAM)
         self.socko.setsockopt(IPPROTO_IP, IP_TOS, self.TOS)
         self.socko.settimeout(self.timeout)
@@ -197,17 +199,25 @@ class MiddlewareUnreliable:
 
     def receive(self) -> tuple[bytes, tuple[str, int]]:
         while True:
-            data, address = self.socko.recvfrom(self.MTU)
+            data, address = self.socko.recvfrom(2048) #Must be greater than MTU?
+            data = self.dataBuffer[address] + data
             received = []
-            while data:
-                data_length = int.from_bytes(
-                    data[2:4], byteorder="big", signed=False
-                )  # Get length from header field
+            data_length = int.from_bytes(
+                data[2:4], byteorder="big", signed=False
+            )
+            while len(data) >= data_length:
                 pack = Fragmenter.create_from_raw_data(
                     data[:data_length], source=address
                 )
-                received.extend(Fragmenter.process_packet(pack))
                 data = data[data_length:]
+                received.extend(Fragmenter.process_packet(pack))
+                if len(data) < 4:
+                    break
+                else:
+                    data_length = int.from_bytes(
+                        data[2:4], byteorder="big", signed=False
+                    )
+            self.dataBuffer[address] = data
 
             if received:
                 return b"".join([i.get_data() for i in received]), address
