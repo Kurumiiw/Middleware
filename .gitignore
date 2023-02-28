@@ -127,3 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+
+middleware/middleware/configuration/example_config_out.ini
+middleware/tests/configuration/test_configuration_out.ini
