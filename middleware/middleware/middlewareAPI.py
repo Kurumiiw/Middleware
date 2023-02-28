@@ -184,7 +184,9 @@ class MiddlewareUnreliable:
         self.timeout = timeout
         self.fragmentTimeout = 2  # TODO: Change this with config file
         self.maxRetries = maxRetries
-        self.dataBuffer: defaultdict[tuple[str, int], bytearray] = defaultdict(bytearray)
+        self.dataBuffer: defaultdict[tuple[str, int], bytearray] = defaultdict(
+            bytearray
+        )
         self.socko = socket(AF_INET, SOCK_DGRAM)
         self.socko.setsockopt(IPPROTO_IP, IP_TOS, self.TOS)
         self.socko.settimeout(self.timeout)
@@ -199,12 +201,10 @@ class MiddlewareUnreliable:
 
     def receive(self) -> tuple[bytes, tuple[str, int]]:
         while True:
-            data, address = self.socko.recvfrom(2048) #Must be greater than MTU?
+            data, address = self.socko.recvfrom(2048)  # Must be greater than MTU?
             data = self.dataBuffer[address] + data
             received = []
-            data_length = int.from_bytes(
-                data[2:4], byteorder="big", signed=False
-            )
+            data_length = int.from_bytes(data[2:4], byteorder="big", signed=False)
             while len(data) >= data_length:
                 pack = Fragmenter.create_from_raw_data(
                     data[:data_length], source=address
