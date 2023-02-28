@@ -40,13 +40,11 @@ class Fragmenter:
     ] = defaultdict(dict)
 
     @staticmethod
-    def fragment(packet: Packet, /, mtu=500) -> list[Union[Fragment, Packet]]:
+    def fragment(packet: Packet, /, mtu=500):
         """
         Fragments the packet appropriately for the chosen MTU, returning a list of fragments or
         a list containing the original packet.
         """
-        fragments: list[Union[Fragment, Packet]] = []
-
         # TODO: Finding a better way to determine TCP header size would avoid some overhead.
         # Perhaps we can assume that our Middleware makes no packets with additional TCP header options?
         effective_mtu = mtu - MAX_TCP_HEADER_BYTES - 6
@@ -58,7 +56,8 @@ class Fragmenter:
 
         # No need to fragment if size is already < effective_mtu
         if packet.get_size() <= effective_mtu:
-            return [packet]
+            yield packet
+            return
 
         offset = 0
         counter = 0
@@ -70,29 +69,25 @@ class Fragmenter:
         id = Fragmenter.get_next_identification()
         while offset < packet.get_data_size():
             if counter == final:
-                fragments.append(
-                    Fragment(
-                        packet.get_data()[offset : (offset + effective_mtu)],
-                        source=packet.source,
-                        is_final=True,
-                        identification=id,
-                        seq=counter,
-                    )
+                yield Fragment(
+                    packet.get_data()[offset : (offset + effective_mtu)],
+                    source=packet.source,
+                    is_final=True,
+                    identification=id,
+                    seq=counter,
                 )
             else:
-                fragments.append(
-                    Fragment(
-                        packet.get_data()[offset : (offset + effective_mtu)],
-                        source=packet.source,
-                        identification=id,
-                        seq=counter,
-                    )
+                yield Fragment(
+                    packet.get_data()[offset : (offset + effective_mtu)],
+                    source=packet.source,
+                    identification=id,
+                    seq=counter,
                 )
 
             offset = offset + effective_mtu
             counter = counter + 1
 
-        return fragments
+        return
 
     @staticmethod
     def process_packet(fragment: Union[Packet, Fragment]) -> list[Packet]:

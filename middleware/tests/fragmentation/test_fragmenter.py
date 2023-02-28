@@ -45,7 +45,7 @@ def test_shuffled_reassembly():
 
     p = Packet(SAMPLE_DATA, source=("test", 1234))
 
-    fragments = Fragmenter.fragment(p)
+    fragments = [i for i in Fragmenter.fragment(p)]
     random.shuffle(fragments)
 
     received = Fragmenter.process_packets(fragments)
@@ -63,7 +63,7 @@ def test_interrupted_reassembly():
 
     p = Packet(SAMPLE_DATA, source=("test", 1234))
 
-    fragments = Fragmenter.fragment(p)
+    fragments = [i for i in Fragmenter.fragment(p)]
     random.shuffle(fragments)
 
     received = Fragmenter.process_packets(fragments[:10])
