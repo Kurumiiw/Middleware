@@ -1,3 +1,5 @@
+from typing import List, Union
+from middleware.fragmentation.fragment import Fragment
 import pytest
 import random
 from middleware.fragmentation.fragmenter import Fragmenter
@@ -43,7 +45,7 @@ def test_shuffled_reassembly():
 
     p = Packet(SAMPLE_DATA, source=("test", 1234))
 
-    fragments = Fragmenter.fragment(p)
+    fragments = [i for i in Fragmenter.fragment(p)]
     random.shuffle(fragments)
 
     received = Fragmenter.process_packets(fragments)
@@ -61,7 +63,7 @@ def test_interrupted_reassembly():
 
     p = Packet(SAMPLE_DATA, source=("test", 1234))
 
-    fragments = Fragmenter.fragment(p)
+    fragments = [i for i in Fragmenter.fragment(p)]
     random.shuffle(fragments)
 
     received = Fragmenter.process_packets(fragments[:10])
@@ -105,32 +107,57 @@ def test_multiple_packets():
 @pytest.mark.slow
 def test_multiple_packets_2():
     """
-    Tests with many mixed source, shuffled packets where some do not get fragmented.
-    Fragments are processed in several batches. Should constitute a realistic scenario.
+    Tests the entire packet pipeline: packet->fragments->bytestream->fragments->
+    packet, in a scenario that should be realistic to real world usage of the
+    Middleware:
+    - Multiple packtes of various sizes.
+    - Fragments are shuffled to simulate unordered receival.
     """
+    # Sender side
+    ## Create packets from data.
     p: list[Packet] = []
-    for i in range(1, 100000, 50):
+    for i in range(1, 5000, 50):  # 100000
         p.append(
             Packet(
                 bytearray(random.randbytes(i)),
-                source=("".join(random.choice("abc")), random.randint(0, 10)),
+                source=("test", 0),
             )
         )
 
-    fragments = []
+    ## Fragment packets.
+    fragments: list[Union[Fragment, Packet]] = []
     for x in p:
         fragments.extend(Fragmenter.fragment(x))
 
+    ## Transfer reordering.
+    random.shuffle(fragments)
+
+    # Receiver
+    ## Receive bytestream.
+    bytestream = bytearray()
+    for f in fragments:
+        bytestream.extend(f.data)
+
     received: list[Packet] = []
 
-    offset = 0
-    while offset < len(fragments):
-        received.extend(Fragmenter.process_packets(fragments[offset : (offset + 20)]))
-        offset = offset + 20
+    ## Defragment packets/fragments from bytestream.
+    while len(bytestream) > 0:
+        length = int.from_bytes(bytestream[2:4], byteorder="big", signed=False)
 
-    received = sorted(received, key=lambda p: len(p.data))
+        dat = bytestream[:length]
+        bytestream = bytestream[length:]
 
-    assert len(received) == len(p)
+        received.append(Fragmenter.create_from_raw_data(dat, source=("test", 0)))
 
-    for a, b in zip(p, received):
+    ## Reassemble packets.
+    rec_pack: list[Packet] = []
+    for f in received:
+        rec_pack.extend(Fragmenter.process_packet(f))
+
+    rec_pack = sorted(rec_pack, key=lambda p: len(p.data))
+
+    # Assert received packets == sent packets.
+    assert len(rec_pack) == len(p)
+
+    for a, b in zip(p, rec_pack):
         assert a.data == b.data

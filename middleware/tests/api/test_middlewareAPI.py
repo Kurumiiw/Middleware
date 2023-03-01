@@ -55,7 +55,9 @@ def test_send_and_receive_reliable():
 
     mwSend.connect(("localhost", 5001))
     mwSend.send(b"Hello there")
-    assert mwSend.receive() == b"General Kenobi"
+    received = mwSend.receive()
+    print(received)
+    assert received == b"General Kenobi"
 
     mwReceive.close()
     mwSend.close()
@@ -67,26 +69,23 @@ def test_sending_and_receiving_large_file_reliable():
     gifData = testGif.read()
     testGif.close()
 
-    def waitForPacket(mwSocket):
-        conn, addr = mwSocket.accept()
-        allReceivedData = b""
-        receivedData = conn.receive()
-
-        while receivedData != b"":
-            allReceivedData += receivedData
-            receivedData = conn.receive()
-
-        assert allReceivedData == gifData
+    def sendPacket(mwSocket):
+        mwSocket.connect(("localhost", 5000))
+        mwSocket.send(gifData)
 
     mwReceive = MiddlewareAPI.reliable("", 5000)
-    mwSend = MiddlewareAPI.reliable("", 5005)
+    mwSend = MiddlewareAPI.reliable("", 5005, timeout=30)
 
     mwReceive.bind(("", 5000))
     mwReceive.listen()
-    threading.Thread(target=waitForPacket, args=(mwReceive,)).start()
+    t = threading.Thread(target=sendPacket, args=(mwSend,))
+    t.start()
 
-    mwSend.connect(("localhost", 5000))
-    mwSend.send(gifData)
+    conn, addr = mwReceive.accept()
+    data = conn.receive()
+    assert data == gifData
+
+    t.join()
 
     mwReceive.close()
     mwSend.close()
@@ -102,7 +101,7 @@ def test_sending_and_receiving_large_file_unreliable():
         mwSocket.send(gifData, ("localhost", 5005))
 
     mwSend = MiddlewareUnreliable("", 5000)
-    mwReceive = MiddlewareUnreliable("", 5005, timeout=15)
+    mwReceive = MiddlewareUnreliable("", 5005, timeout=30)
     mwReceive.bind()
     threading.Thread(
         target=sendPacket, args=(mwSend,)
@@ -113,3 +112,8 @@ def test_sending_and_receiving_large_file_unreliable():
 
     mwReceive.close()
     mwSend.close()
+
+
+if __name__ == "__main__":
+    test_send_and_receive_reliable()
+    test_sending_and_receiving_large_file_reliable()

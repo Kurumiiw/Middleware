@@ -12,7 +12,8 @@ def test_packet_creation():
     p = Packet(SAMPLE_DATA, source=("a", 1))
 
     assert p.get_data() == SAMPLE_DATA
-    assert p.get_header() == bytearray([0, 0, 0])
+    assert p.get_header() == bytearray([0, 0, 0, 8])
+    assert p.get_length() == len(SAMPLE_DATA) + 4
     assert p.source == ("a", 1)
 
 

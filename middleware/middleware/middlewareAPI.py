@@ -2,6 +2,7 @@ from socket import *
 from middleware.fragmentation.packet import *
 from middleware.fragmentation.fragment import *
 from middleware.fragmentation.fragmenter import Fragmenter
+from collections import defaultdict
 import threading
 import time
 
@@ -96,6 +97,7 @@ class MiddlewareReliable:
         self.MTU = MTU
         self.timeout = timeout
         self.maxRetries = maxRetries
+        self.dataBuffer = bytearray()
         if sock is None:
             self.socko = socket(AF_INET, SOCK_STREAM)
             self.socko.setsockopt(IPPROTO_IP, IP_TOS, self.TOS)
@@ -109,7 +111,9 @@ class MiddlewareReliable:
     def send(self, data: bytes) -> None:
         pack = Packet(data, source=(self.ip, self.port))
         for i in Fragmenter.fragment(pack, self.MTU):
-            self.socko.send(i.get_data())
+            self.socko.send(i.data)
+            if len(i.data) > self.MTU:
+                print("Fragment too large wtfffff")
 
     def listen(self, backlog: int = 5) -> None:
         self.socko.listen(backlog)
@@ -130,7 +134,37 @@ class MiddlewareReliable:
         self.socko.close()
 
     def receive(self) -> bytes:
-        return self.socko.recv(self.MTU)
+        address = self.socko.getpeername()
+        while True:
+            data = self.socko.recv(1024)
+
+            data = (
+                self.dataBuffer + data
+            )  # Add the data from the buffer to the data received
+
+            if not data:
+                return None
+
+            data_length = int.from_bytes(
+                data[2:4], byteorder="big", signed=False
+            )  # Get the length of the packet
+
+            while len(data) >= data_length:
+                pack = Fragmenter.create_from_raw_data(
+                    data[:data_length], source=address
+                )  # Create a packet from the data received
+                data = data[data_length:]  # Remove the data that was part of the packet
+                received = Fragmenter.process_packet(pack)
+                if len(received) == 1:
+                    self.dataBuffer = data
+                    return received[0].get_data()
+                if len(data) < 4:
+                    break  # Remaining data is not enough to get the length of the next packet
+                else:
+                    data_length = int.from_bytes(
+                        data[2:4], byteorder="big", signed=False
+                    )
+            self.dataBuffer = data
 
 
 class MiddlewareUnreliable:
@@ -150,10 +184,12 @@ class MiddlewareUnreliable:
         self.timeout = timeout
         self.fragmentTimeout = 2  # TODO: Change this with config file
         self.maxRetries = maxRetries
+        self.dataBuffer: defaultdict[tuple[str, int], bytearray] = defaultdict(
+            bytearray
+        )
         self.socko = socket(AF_INET, SOCK_DGRAM)
         self.socko.setsockopt(IPPROTO_IP, IP_TOS, self.TOS)
         self.socko.settimeout(self.timeout)
-        self.fragmentsDict = {}  # {(address, packetID): [[packets], time]}
 
     def send(self, data: bytes, address: tuple[str, int]) -> None:
         pack = Packet(data, source=(self.ip, self.port))
@@ -165,13 +201,26 @@ class MiddlewareUnreliable:
 
     def receive(self) -> tuple[bytes, tuple[str, int]]:
         while True:
-            data, address = self.socko.recvfrom(self.MTU)
-            pack = Fragmenter.create_from_raw_data(data, source=address)
+            data, address = self.socko.recvfrom(2048)  # Must be greater than MTU?
+            data = self.dataBuffer[address] + data
+            received = []
+            data_length = int.from_bytes(data[2:4], byteorder="big", signed=False)
+            while len(data) >= data_length:
+                pack = Fragmenter.create_from_raw_data(
+                    data[:data_length], source=address
+                )
+                data = data[data_length:]
+                received.extend(Fragmenter.process_packet(pack))
+                if len(data) < 4:
+                    break
+                else:
+                    data_length = int.from_bytes(
+                        data[2:4], byteorder="big", signed=False
+                    )
+            self.dataBuffer[address] = data
 
-            received = Fragmenter.process_packet(pack)
-
-            if len(received) == 1:
-                return received[0].get_data(), address
+            if received:
+                return b"".join([i.get_data() for i in received]), address
 
     def close(self) -> None:
         """Closes the socket and banishes it from the mortal realm (or plane, if you prefer).
@@ -184,7 +233,6 @@ if __name__ == "__main__":
 
     def sendDelayed():
         time.sleep(4)
-        print(mw2.fragmentsDict)
         mw.send(b"Bababoi", ("localhost", 5005))
 
     mw = MiddlewareAPI.unreliable("", 5000, TOS=0x8, MTU=150, timeout=10)
@@ -197,4 +245,3 @@ if __name__ == "__main__":
     ).start()  # Change send to skip one fragment to test timeout
     receivedData = mw2.receive()
     print(receivedData)
-    print(mw2.fragmentsDict)
