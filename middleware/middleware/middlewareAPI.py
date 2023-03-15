@@ -2,9 +2,12 @@ from socket import *
 from middleware.fragmentation.packet import *
 from middleware.fragmentation.fragment import *
 from middleware.fragmentation.fragmenter import Fragmenter
+from middleware.configuration.config import config
 from collections import defaultdict
 import threading
 import time
+
+config.load_from_file("middleware/configuration/config.ini")
 
 
 class InvalidIPException(ValueError):
