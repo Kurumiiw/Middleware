@@ -3,6 +3,7 @@ from middleware.configuration.config import Config
 
 test_config = Config()
 
+
 def test_illegal_use_before_set():
     with pytest.raises(AssertionError):
         print(test_config.mtu)
