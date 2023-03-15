@@ -1,37 +1,39 @@
 import pytest
-from middleware.configuration.config import *
+from middleware.configuration.config import Config
+
+test_config = Config()
 
 
 def test_illegal_use_before_set():
     with pytest.raises(AssertionError):
-        print(config.mtu)
+        print(test_config.mtu)
 
 
 def test_load_from_file():
-    config.load_from_file("tests/configuration/test_config.ini")
-    assert config.mtu == 512
-    assert config.fragment_timeout == 60000
-    assert config.expected_congestion == 128
-    assert config.expected_bandwidth == 256
-    assert config.expected_packet_loss == 512
-    assert config.expected_jitter == 1024
-    assert config.tcp_frto == 2
-    assert config.tcp_reflect_tos == 0
-    assert config.tcp_sack == 1
+    test_config.load_from_file("tests/configuration/test_config.ini")
+    assert test_config.mtu == 512
+    assert test_config.fragment_timeout == 60000
+    assert test_config.expected_congestion == 128
+    assert test_config.expected_bandwidth == 256
+    assert test_config.expected_packet_loss == 512
+    assert test_config.expected_jitter == 1024
+    assert test_config.tcp_frto == 2
+    assert test_config.tcp_reflect_tos == 0
+    assert test_config.tcp_sack == 1
 
 
 def test_set_get():
-    config.expected_bandwidth = 0
-    config.expected_packet_loss = 1
-    config.expected_jitter = 2
+    test_config.expected_bandwidth = 0
+    test_config.expected_packet_loss = 1
+    test_config.expected_jitter = 2
 
-    assert config.expected_bandwidth == 0
-    assert config.expected_packet_loss == 1
-    assert config.expected_jitter == 2
+    assert test_config.expected_bandwidth == 0
+    assert test_config.expected_packet_loss == 1
+    assert test_config.expected_jitter == 2
 
 
 def test_save_to_file():
-    config.save_to_file("tests/configuration/test_config_out.ini")
+    test_config.save_to_file("tests/configuration/test_config_out.ini")
 
     expected_content = """[network_properties]
 mtu = 512

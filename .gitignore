@@ -130,4 +130,4 @@ dmypy.json
 
 
 middleware/middleware/configuration/example_config_out.ini
-middleware/tests/configuration/test_configuration_out.ini
+middleware/tests/configuration/test_config_out.ini
