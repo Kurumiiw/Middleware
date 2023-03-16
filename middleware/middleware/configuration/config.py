@@ -163,3 +163,4 @@ class Config:
 
 
 config = Config()
+config.load_from_file("middleware/configuration/config.ini")

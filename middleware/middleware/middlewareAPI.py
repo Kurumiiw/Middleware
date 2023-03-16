@@ -1,250 +1,183 @@
 from socket import *
-from middleware.fragmentation.packet import *
-from middleware.fragmentation.fragment import *
-from middleware.fragmentation.fragmenter import Fragmenter
+import middleware.fragmentation.fragmentation as fragmentation
 from middleware.configuration.config import config
-from collections import defaultdict
-import threading
+import collections
+import math
 import time
 
-config.load_from_file("middleware/configuration/config.ini")
-
-
-class InvalidIPException(ValueError):
-    """
-    Raised when an invalid IP is provided.
-    """
-
-    pass
-
-
-class InvalidPortException(ValueError):
-    """
-    Raised when an invalid port is provided.
-    """
-
-    pass
-
-
-class InvalidMTUException(ValueError):
-    """
-    Raised when an invalid MTU is provided.
-    """
-
-    pass
-
-
-class InvalidTOSException(ValueError):
-    """
-    Raised when an invalid TOS is provided.
-    """
-
-    pass
-
-
-class MiddlewareAPI:
-    @staticmethod
-    def reliable(
-        ip: str,
-        port: int,
-        TOS: int = 0,
-        MTU: int = 1500,
-        timeout: float = 0.5,
-        maxRetries: int = 5,
-    ) -> "MiddlewareReliable":
-        MiddlewareAPI.validate_fields(ip, port, MTU, TOS)
-        return MiddlewareReliable(ip, port, TOS, MTU, timeout, maxRetries)
-
-    @staticmethod
-    def unreliable(
-        ip: str,
-        port: int,
-        TOS: int = 0,
-        MTU: int = 1500,
-        timeout: float = 0.5,
-        maxRetries: int = 5,
-    ) -> "MiddlewareUnreliable":
-        MiddlewareAPI.validate_fields(ip, port, MTU, TOS)
-        return MiddlewareUnreliable(ip, port, TOS, MTU, timeout, maxRetries)
-
-    @staticmethod
-    def validate_fields(ip: str, port: int, MTU: int, TOS: int) -> None:
-        if ip != "":  # If the IP is not empty, validate it
-            try:
-                inet_aton(ip)
-            except OSError:
-                raise InvalidIPException("IP must be a valid IPv4 address")
-
-        if port < 0 or port > 65535:
-            raise InvalidPortException("Port must be a valid port number")
-        if MTU < 68 or MTU > 65535:
-            raise InvalidMTUException("MTU must be a valid MTU number")
-        if TOS < 0 or TOS > 255:
-            raise InvalidTOSException("TOS must be a valid TOS number")
-
-
 class MiddlewareReliable:
-    def __init__(
-        self,
-        ip: str,
-        port: int,
-        TOS: int = 0,
-        MTU: int = 1500,
-        timeout: float = 0.5,
-        maxRetries: int = 5,
-        sock=None,
-    ):
-        self.ip = ip
-        self.port = port
-        self.TOS = TOS
-        self.MTU = MTU
-        self.timeout = timeout
-        self.maxRetries = maxRetries
-        self.dataBuffer = bytearray()
-        if sock is None:
-            self.socko = socket(AF_INET, SOCK_STREAM)
-            self.socko.setsockopt(IPPROTO_IP, IP_TOS, self.TOS)
-            self.socko.settimeout(self.timeout)
+    _socko: socket
+
+    def __init__(self,*, _internal_socket=None):
+        if _internal_socket != None:
+            self._socko = _internal_socket
         else:
-            self.socko = sock
+            self._socko = socket(AF_INET, SOCK_STREAM)
 
-    def connect(self, address: tuple[str, int]) -> None:
-        self.socko.connect(address)
-
-    def send(self, data: bytes) -> None:
-        pack = Packet(data, source=(self.ip, self.port))
-        for i in Fragmenter.fragment(pack, self.MTU):
-            self.socko.send(i.data)
-            if len(i.data) > self.MTU:
-                print("Fragment too large wtfffff")
-
-    def listen(self, backlog: int = 5) -> None:
-        self.socko.listen(backlog)
+        # TODO: Force tcp to not use ip or tcp options when sending data.
+        #       This will reduce overhead from 120 bytes to 20
+        ip_header_size = 60
+        tcp_header_size = 60
+        mss = config.mtu - ip_header_size - tcp_header_size
+        self._socko.setsockopt(IPPROTO_TCP, TCP_MAXSEG, mss)
 
     def bind(self, address: tuple[str, int]) -> None:
-        self.socko.bind(address)
+        """
+        Funtionally identical to Pyton socket.bind
+        """
+        self._socko.bind(address)
+
+    def listen(self, backlog: int = 5) -> None:
+        """
+        Funtionally identical to Pyton socket.listen
+        """
+        self._socko.listen(backlog)
+
+    def connect(self, address: tuple[str, int]) -> None:
+        """
+        Funtionally identical to Pyton socket.connect
+        """
+        self._socko.connect(address)
 
     def accept(self) -> tuple["MiddlewareReliable", tuple[str, int]]:
-        sock, address = self.socko.accept()
-        return MiddlewareReliable(*sock.getsockname(), sock=sock), address
+        """
+        Funtionally identical to Pyton socket.accept, except the connection socket is converted to a MiddlewareReliable socket
+        """
+        socko, address = self._socko.accept()
+        return MiddlewareReliable(_internal_socket=socko), address
 
-    @classmethod
-    def fromSocket(cls, sock: socket) -> "MiddlewareReliable":
-        return cls(sock=sock)
+    def send(self, data: bytes) -> int:
+        """
+        Funtionally identical to Pyton socket.send
+        """
+        return self._socko.send(data)
+
+    def sendall(self, data: bytes) -> None:
+        """
+        Funtionally identical to Pyton socket.sendall
+        """
+        self._socko.sendall(data)
+
+    def recv(self, buffer_size: int) -> bytes:
+        return self._socko.recv(buffer_size)
+
+    def settimeout(self, timeout_s: float) -> None:
+        """
+        Sets the current timeout for blocking operations (accept/connect/send/sendall/recv), None signifies an infinite timeout
+        """
+        self._socko.settimeout(timeout)
+        
+    def gettimeout(self) -> float:
+        """
+        Returns the current timeout for blocking operations (accept/connect/send/sendall/recv), None signifies an infinite timeout
+        """
+        return self._socko.gettimeout()
+
+    def set_tos(self, tos: int) -> None:
+        """
+        Sets the current TOS value used for outbound packets
+        """
+        self._socko.setsockopt(IPROTO_IP, IP_TOS, tos)
+
+    def get_tos(self) -> int:
+        """
+        Returns the current TOS value used for outbound packets
+        """
+        self._socko.getsockopt(IPPROTO_IP, IP_TOS)
 
     def close(self) -> None:
         """Banishes the socket from the mortal realm"""
-        self.socko.close()
-
-    def receive(self) -> bytes:
-        address = self.socko.getpeername()
-        while True:
-            data = self.socko.recv(1024)
-
-            data = (
-                self.dataBuffer + data
-            )  # Add the data from the buffer to the data received
-
-            if not data:
-                return None
-
-            data_length = int.from_bytes(
-                data[2:4], byteorder="big", signed=False
-            )  # Get the length of the packet
-
-            while len(data) >= data_length:
-                pack = Fragmenter.create_from_raw_data(
-                    data[:data_length], source=address
-                )  # Create a packet from the data received
-                data = data[data_length:]  # Remove the data that was part of the packet
-                received = Fragmenter.process_packet(pack)
-                if len(received) == 1:
-                    self.dataBuffer = data
-                    return received[0].get_data()
-                if len(data) < 4:
-                    break  # Remaining data is not enough to get the length of the next packet
-                else:
-                    data_length = int.from_bytes(
-                        data[2:4], byteorder="big", signed=False
-                    )
-            self.dataBuffer = data
-
+        self._socko.close()
 
 class MiddlewareUnreliable:
-    def __init__(
-        self,
-        ip: str,
-        port: int,
-        TOS: int = 0,
-        MTU: int = 1500,
-        timeout: float = 0.5,
-        maxRetries: int = 5,
-    ):
-        self.ip = ip
-        self.port = port
-        self.TOS = TOS
-        self.MTU = MTU
-        self.timeout = timeout
-        self.fragmentTimeout = 2  # TODO: Change this with config file
-        self.maxRetries = maxRetries
-        self.dataBuffer: defaultdict[tuple[str, int], bytearray] = defaultdict(
-            bytearray
-        )
-        self.socko = socket(AF_INET, SOCK_DGRAM)
-        self.socko.setsockopt(IPPROTO_IP, IP_TOS, self.TOS)
-        self.socko.settimeout(self.timeout)
+    _socko: socket
+    _fragmenter: fragmentation.Fragmenter
+    _reassembler: fragmentation.Reassembler
 
-    def send(self, data: bytes, address: tuple[str, int]) -> None:
-        pack = Packet(data, source=(self.ip, self.port))
-        for i in Fragmenter.fragment(pack, self.MTU):
-            self.socko.sendto(i.data, address)
+    def __init__(self):
+        self._socko = socket(AF_INET, SOCK_DGRAM)
+        self._fragmenter = fragmentation.Fragmenter()
+        self._reassembler = fragmentation.Reassembler()
 
-    def bind(self) -> None:
-        self.socko.bind((self.ip, self.port))
+    def bind(self, address: tuple[str, int]) -> None:
+        """
+        Functionally identical to Pyton socket.bind
+        """
+        self._socko.bind(address)
 
-    def receive(self) -> tuple[bytes, tuple[str, int]]:
-        while True:
-            data, address = self.socko.recvfrom(2048)  # Must be greater than MTU?
-            data = self.dataBuffer[address] + data
-            received = []
-            data_length = int.from_bytes(data[2:4], byteorder="big", signed=False)
-            while len(data) >= data_length:
-                pack = Fragmenter.create_from_raw_data(
-                    data[:data_length], source=address
-                )
-                data = data[data_length:]
-                received.extend(Fragmenter.process_packet(pack))
-                if len(data) < 4:
-                    break
-                else:
-                    data_length = int.from_bytes(
-                        data[2:4], byteorder="big", signed=False
-                    )
-            self.dataBuffer[address] = data
+    def settimeout(self, timeout_s: float) -> None:
+        """
+        Sets the current timeout for blocking operations (sendto/recvfrom), None signifies an infinite timeout
+        """
+        self._socko.settimeout(timeout)
+        
+    def gettimeout(self) -> float:
+        """
+        Returns the current timeout for blocking operations (sendto/recvfrom), None signifies an infinite timeout
+        """
+        return self._socko.gettimeout()
 
-            if received:
-                return b"".join([i.get_data() for i in received]), address
+    def set_tos(self, tos: int) -> None:
+        """
+        Sets the current TOS value used for outbound packets
+        """
+        self._socko.setsockopt(IPROTO_IP, IP_TOS, tos)
+
+    def get_tos(self) -> int:
+        """
+        Returns the current TOS value used for outbound packets
+        """
+        self._socko.getsockopt(IPPROTO_IP, IP_TOS)
+
+    def get_max_payload_size(self) -> int:
+        """
+        Returns the maximum payload size than can be sent with a single MiddlewareUnrelaible datagram (single call to sendto)
+        """
+        return fragmentation.max_dgram_payload
 
     def close(self) -> None:
         """Closes the socket and banishes it from the mortal realm (or plane, if you prefer).
         Use this method to rid your system of any malevolent socket entities and restore order to the world of network programming!
          - ChatGPT 2023"""
-        self.socko.close()
+        self._socko.close()
 
+    def sendto(self, data: bytes, address: tuple[str, int]) -> None:
+        """
+        Mimics Python socket.sendto, but the blocking timeout affects an internal socket.sendto call
+        for each fragment sent, and not the MiddlewareUnreliable.sendto call. Rated for max payload of 63488 B
+        (this can be queried with MiddlewareUnreliable.get_max_payload_size)
+        """
+        for fragment in self._fragmenter.fragment(data):
+            self._socko.sendto(fragment, address)
 
-if __name__ == "__main__":
+    def recvfrom(self) -> tuple[bytes, tuple[str, int]]:
+        """
+        Mimics Python socket.recvfrom, but "block" until either a timeout error is raised by an internal socket.recvfrom call
+        or a complete MiddlewareUnreliable datagram has arrived
+        """
+        while True:
+            # NOTE: Probe received fragment size
+            buffer_size = config.mtu
+            while True:
+                try:
+                    self._socko.recvfrom(buffer_size, MSG_PEEK)
+                    break
+                except TimeoutError as err:
+                    raise err
+                except OSError:
+                    buffer_size *= 2
+                    continue
 
-    def sendDelayed():
-        time.sleep(4)
-        mw.send(b"Bababoi", ("localhost", 5005))
+            frag, addr = self._socko.recvfrom(buffer_size)
 
-    mw = MiddlewareAPI.unreliable("", 5000, TOS=0x8, MTU=150, timeout=10)
-    mw2 = MiddlewareAPI.unreliable("", 5005, TOS=0x8, MTU=150, timeout=10)
-    mw2.bind()
-    mw.bind()
-    mw.send(b"Hello there" * 80, ("localhost", 5005))
-    threading.Thread(
-        target=sendDelayed, daemon=True
-    ).start()  # Change send to skip one fragment to test timeout
-    receivedData = mw2.receive()
-    print(receivedData)
+            # NOTE: Old datagrams (partial/complete datagrams containing old fragments) are timed out after the blocking socket.recvfrom
+            #       operation has completed to avoid datagram id collisions when a lot of time is spent in socket.recvfrom
+            self._reassembler.timeout_old_datagrams()
+
+            self._reassembler.add_fragment_to_datagram(frag, addr)
+
+            completed_dgram = self._reassembler.check_for_completed_datagrams()
+            if completed_dgram == None:
+                continue
+            else:
+                return completed_dgram[0], completed_dgram[1]
