@@ -75,6 +75,7 @@ class Config:
         return self.default_generated_get_var(var_name)
 
     def set_var(self, var_name: str, value: any):
+        """
         if var_name in [var.name for var in self._system_configuration_var_list]:
             if var_name == "tcp_frto":
                 os.system("sysctl -w net.ipv4.tcp_frto={}".format(value))
@@ -84,6 +85,7 @@ class Config:
                 )
             elif var_name == "tcp_sack":
                 os.system("sysctl -w net.ipv4.tcp_sack={}".format(1 if value else 0))
+        """
 
         return self.default_generated_set_var(var_name, value)
 
