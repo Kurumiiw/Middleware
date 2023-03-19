@@ -92,6 +92,7 @@ class Reassembler:
         if (addr, dgram_id) not in self.datagrams:
             self.datagrams[addr, dgram_id] = self.DatagramStoreEntry()
 
+        self.datagrams[addr, dgram_id].timestamp = time.perf_counter()
         self.datagrams[addr, dgram_id].frag_store[frag_idx] = payload
 
         if is_fin:
