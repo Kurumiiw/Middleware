@@ -53,10 +53,12 @@ class Reassembler:
             self.timestamp = time.perf_counter()
             self.is_fin = False
             self.expected_frag_count = -1
-            self.frag_store = {}
+            self.frag_store: dict[int, bytes] = {}
 
     def __init__(self):
-        self.datagrams: defaultdict = defaultdict(self.DatagramStoreEntry)
+        self.datagrams: defaultdict[
+            tuple[str, int], self.DatagramStoreEntry
+        ] = defaultdict(self.DatagramStoreEntry)
 
     def timeout_old_datagrams(self) -> None:
         """
