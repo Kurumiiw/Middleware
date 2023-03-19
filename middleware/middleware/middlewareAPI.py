@@ -16,7 +16,7 @@ class MiddlewareReliable:
             self._socko = socket(AF_INET, SOCK_STREAM)
 
         # TODO: Force tcp to not use ip or tcp options when sending data.
-        #       This will reduce overhead from 120 bytes to 20
+        #       This will reduce overhead from 120 bytes to 40
         ip_header_size = 60
         tcp_header_size = 60
         mss = config.mtu - ip_header_size - tcp_header_size
@@ -135,7 +135,7 @@ class MiddlewareUnreliable:
         """
         Returns the maximum payload size than can be sent with a single MiddlewareUnrelaible datagram (single call to sendto)
         """
-        return fragmentation.max_dgram_payload
+        return fragmentation.MAX_DGRAM_PAYLOAD
 
     def close(self) -> None:
         """Closes the socket and banishes it from the mortal realm (or plane, if you prefer).

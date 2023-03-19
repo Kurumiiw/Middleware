@@ -1,15 +1,16 @@
 from middleware.configuration.config import config
+from typing import Optional
 import time
 import math
 
-dgram_id_bits = 28
-frag_idx_bits = 11
-udp_ip_header_size = 28
-mw_header_size = 5
-total_header_size = udp_ip_header_size + mw_header_size
-mtu_min = 64
-max_dgram_payload = (mtu_min - total_header_size) * 2**frag_idx_bits
-max_frag_payload = config.mtu - total_header_size
+DGRAM_ID_BITS = 28
+FRAG_IDX_BITS = 11
+UDP_IP_HEADER_SIZE = 28
+MW_HEADER_SIZE = 5
+TOTAL_HEADER_SIZE = UDP_IP_HEADER_SIZE + MW_HEADER_SIZE
+MTU_MIN = 64
+MAX_DGRAM_PAYLOAD = (MTU_MIN - TOTAL_HEADER_SIZE) * 2**FRAG_IDX_BITS
+MAX_FRAG_PAYLOAD = config.mtu - TOTAL_HEADER_SIZE
 
 
 class Fragmenter:
@@ -19,15 +20,15 @@ class Fragmenter:
         self.current_dgram_id = 0
 
     def fragment(self, data: bytes) -> list[bytes]:
-        if len(data) > max_dgram_payload:
+        if len(data) > MAX_DGRAM_PAYLOAD:
             raise ValueError(
                 "Payload is too large to be sent with a MiddlewareUnreliable datagram"
             )
 
         dgram_id = self.current_dgram_id
-        self.current_dgram_id = (self.current_dgram_id + 1) % 2**dgram_id_bits
+        self.current_dgram_id = (self.current_dgram_id + 1) % 2**DGRAM_ID_BITS
 
-        frag_count = int(math.ceil(len(data) / max_frag_payload))
+        frag_count = int(math.ceil(len(data) / MAX_FRAG_PAYLOAD))
 
         fragments = []
         for frag_idx in range(frag_count):
@@ -39,7 +40,7 @@ class Fragmenter:
             fragment = bytearray()
             fragment.extend(header)
             fragment.extend(
-                data[frag_idx * max_frag_payload : (frag_idx + 1) * max_frag_payload]
+                data[frag_idx * MAX_FRAG_PAYLOAD : (frag_idx + 1) * MAX_FRAG_PAYLOAD]
             )
 
             fragments.append(fragment)
@@ -80,13 +81,13 @@ class Reassembler:
         """
         Appends a fragment to a partial/complete datagram
         """
-        header = frag[:mw_header_size]
-        payload = frag[mw_header_size:]
+        header = frag[:MW_HEADER_SIZE]
+        payload = frag[MW_HEADER_SIZE:]
 
         header_bits = int.from_bytes(header, byteorder="little", signed=False)
-        dgram_id = (header_bits >> 12) & ((1 << dgram_id_bits) - 1)
+        dgram_id = (header_bits >> 12) & ((1 << DGRAM_ID_BITS) - 1)
         is_fin = bool(header_bits & (1 << 11))
-        frag_idx = header_bits & ((1 << frag_idx_bits) - 1)
+        frag_idx = header_bits & ((1 << FRAG_IDX_BITS) - 1)
 
         if (addr, dgram_id) not in self.datagrams:
             self.datagrams[addr, dgram_id] = self.DatagramStoreEntry()
@@ -97,7 +98,7 @@ class Reassembler:
             self.datagrams[addr, dgram_id].is_fin = True
             self.datagrams[addr, dgram_id].expected_frag_count = frag_idx + 1
 
-    def check_for_completed_datagrams(self) -> tuple[bytes, tuple[str, int]]:
+    def check_for_completed_datagrams(self) -> Optional[tuple[bytes, tuple[str, int]]]:
         """
         Returns the first complete datagram found, else None
         """
