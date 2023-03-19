@@ -15,8 +15,6 @@ MAX_FRAG_PAYLOAD = config.mtu - TOTAL_HEADER_SIZE
 
 
 class Fragmenter:
-    current_dgram_id: int
-
     def __init__(self):
         self.current_dgram_id = 0
 
@@ -51,11 +49,6 @@ class Fragmenter:
 
 class Reassembler:
     class DatagramStoreEntry:
-        timestamp: float
-        is_fin: bool
-        expected_frag_count: int
-        frag_store: dict
-
         def __init__(self):
             self.timestamp = time.perf_counter()
             self.is_fin = False
