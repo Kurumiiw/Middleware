@@ -1,3 +1,4 @@
+from __future__ import annotations
 from middleware.configuration.config import config
 from typing import Optional
 from collections import defaultdict
@@ -15,6 +16,8 @@ MAX_FRAG_PAYLOAD = config.mtu - TOTAL_HEADER_SIZE
 
 
 class Fragmenter:
+    current_dgram_id: int
+
     def __init__(self):
         self.current_dgram_id = 0
 
@@ -48,12 +51,19 @@ class Fragmenter:
 
 
 class Reassembler:
+    datagrams: defaultdict[tuple[str, int], DatagramStoreEntry]
+
     class DatagramStoreEntry:
+        timestamp: float
+        is_fin: bool
+        expected_frag_count: int
+        frag_store: dict[int, bytes]
+
         def __init__(self):
             self.timestamp = time.perf_counter()
             self.is_fin = False
             self.expected_frag_count = -1
-            self.frag_store: dict[int, bytes] = {}
+            self.frag_store = {}
 
     def __init__(self):
         self.datagrams: defaultdict[
