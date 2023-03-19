@@ -3,6 +3,10 @@ import threading
 
 
 class ChatService:
+    """
+    A class that hosts a chat or connects to a chat using reliable middleware.
+    """
+
     def __init__(self, name: str, address: tuple[str, int]):
         self.hostConnections: list[MiddlewareReliable] = []
         self.address = address
