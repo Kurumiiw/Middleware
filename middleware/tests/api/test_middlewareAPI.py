@@ -87,19 +87,25 @@ def test_sending_and_receiving_large_file_unreliable():
     mwReceive = MiddlewareUnreliable()
 
     testGif = open("tests/api/among-us-dance.gif", "rb")
-    gifData = testGif.read()[:mwSend.get_max_payload_size()]
+    gifData = testGif.read()
     testGif.close()
 
+    max_payload_size = mwSend.get_max_payload_size()
+    gif_data_payloads = [gifData[i*max_payload_size:(i+1)*max_payload_size] for i in range(len(gifData)//max_payload_size + int(len(gifData)%max_payload_size != 0))]
+
     def sendPacket(mwSocket):
-        mwSocket.sendto(gifData, ("localhost", 5005))
+        for payload in gif_data_payloads:
+            mwSocket.sendto(payload, ("localhost", 5005))
 
     mwReceive.bind(("", 5005))
     threading.Thread(
         target=sendPacket, args=(mwSend,)
     ).start()  # Send in different thread because receiving buffer is too small to hold the entire file
-    dataReceived = mwReceive.recvfrom()[0]
+    payloads_received = []
+    for i in range(len(gif_data_payloads)):
+        payloads_received.append(mwReceive.recvfrom()[0])
 
-    assert dataReceived == gifData
+    assert payloads_received.sort() == gif_data_payloads.sort()
 
     mwReceive.close()
     mwSend.close()
