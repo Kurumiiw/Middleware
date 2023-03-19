@@ -69,7 +69,7 @@ class Reassembler:
     def timeout_old_datagrams(self) -> None:
         """
         Goes through all received partial/complete datagrams and times out old ones based on
-        the arrival of their first fragment
+        the arrival of their last fragment
         """
         for key in list(self.datagrams.keys()):
             if (
