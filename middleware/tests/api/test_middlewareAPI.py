@@ -8,11 +8,13 @@ def test_create_MiddlewareReliable():
     mw = MiddlewareReliable()
     assert mw._socko != None
 
+
 def test_create_MiddlewareUnreliable():
     mw = MiddlewareUnreliable()
     assert mw._socko != None
     assert mw._fragmenter != None
     assert mw._reassembler != None
+
 
 def test_send_and_receive_unreliable():
     mwSend = MiddlewareUnreliable()
@@ -23,6 +25,7 @@ def test_send_and_receive_unreliable():
     assert dataReceived == b"Hello"
     mwSend.close()
     mwReceive.close()
+
 
 def test_send_and_receive_reliable():
     def waitForPacket(mwSocket):
@@ -54,6 +57,7 @@ def test_send_and_receive_reliable():
     mwReceive.close()
     mwSend.close()
 
+
 def test_sending_and_receiving_large_file_reliable():
     testGif = open("tests/api/among-us-dance.gif", "rb")
     gifData = testGif.read()
@@ -82,6 +86,7 @@ def test_sending_and_receiving_large_file_reliable():
     mwReceive.close()
     mwSend.close()
 
+
 def test_sending_and_receiving_large_file_unreliable():
     mwSend = MiddlewareUnreliable()
     mwReceive = MiddlewareUnreliable()
@@ -91,7 +96,12 @@ def test_sending_and_receiving_large_file_unreliable():
     testGif.close()
 
     max_payload_size = mwSend.get_max_payload_size()
-    gif_data_payloads = [gifData[i*max_payload_size:(i+1)*max_payload_size] for i in range(len(gifData)//max_payload_size + int(len(gifData)%max_payload_size != 0))]
+    gif_data_payloads = [
+        gifData[i * max_payload_size : (i + 1) * max_payload_size]
+        for i in range(
+            len(gifData) // max_payload_size + int(len(gifData) % max_payload_size != 0)
+        )
+    ]
 
     def sendPacket(mwSocket):
         for payload in gif_data_payloads:
@@ -109,6 +119,7 @@ def test_sending_and_receiving_large_file_unreliable():
 
     mwReceive.close()
     mwSend.close()
+
 
 if __name__ == "__main__":
     test_send_and_receive_reliable()

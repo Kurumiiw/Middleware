@@ -5,10 +5,11 @@ import collections
 import math
 import time
 
+
 class MiddlewareReliable:
     _socko: socket
 
-    def __init__(self,*, _internal_socket=None):
+    def __init__(self, *, _internal_socket=None):
         if _internal_socket != None:
             self._socko = _internal_socket
         else:
@@ -66,7 +67,7 @@ class MiddlewareReliable:
         Sets the current timeout for blocking operations (accept/connect/send/sendall/recv), None signifies an infinite timeout
         """
         self._socko.settimeout(timeout)
-        
+
     def gettimeout(self) -> float:
         """
         Returns the current timeout for blocking operations (accept/connect/send/sendall/recv), None signifies an infinite timeout
@@ -89,6 +90,7 @@ class MiddlewareReliable:
         """Banishes the socket from the mortal realm"""
         self._socko.close()
 
+
 class MiddlewareUnreliable:
     _socko: socket
     _fragmenter: fragmentation.Fragmenter
@@ -110,7 +112,7 @@ class MiddlewareUnreliable:
         Sets the current timeout for blocking operations (sendto/recvfrom), None signifies an infinite timeout
         """
         self._socko.settimeout(timeout)
-        
+
     def gettimeout(self) -> float:
         """
         Returns the current timeout for blocking operations (sendto/recvfrom), None signifies an infinite timeout
