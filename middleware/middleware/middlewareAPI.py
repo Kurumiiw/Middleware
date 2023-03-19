@@ -78,7 +78,7 @@ class MiddlewareReliable:
         """
         Sets the current TOS value used for outbound packets
         """
-        self._socko.setsockopt(IPROTO_IP, IP_TOS, tos)
+        self._socko.setsockopt(IPPROTO_IP, IP_TOS, tos)
 
     def get_tos(self) -> int:
         """
@@ -123,7 +123,7 @@ class MiddlewareUnreliable:
         """
         Sets the current TOS value used for outbound packets
         """
-        self._socko.setsockopt(IPROTO_IP, IP_TOS, tos)
+        self._socko.setsockopt(IPPROTO_IP, IP_TOS, tos)
 
     def get_tos(self) -> int:
         """
