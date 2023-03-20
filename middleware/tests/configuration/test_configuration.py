@@ -13,14 +13,17 @@ def test_load_from_file():
     test_config.load_from_file("tests/configuration/test_config.ini")
     assert test_config.mtu == 512
     assert test_config.fragment_timeout == 5
+    assert test_config.congestion_algorithm == "vegas"
 
 
 def test_set_get():
     test_config.fragment_timeout = 10
     test_config.mtu = 200
+    test_config.congestion_algorithm = "reno"
 
     assert test_config.fragment_timeout == 10
     assert test_config.mtu == 200
+    assert test_config.congestion_algorithm == "reno"
 
 
 def test_save_to_file():
@@ -31,6 +34,7 @@ mtu = 200
 
 [middleware_configuration]
 fragment_timeout = 10
+congestion_algorithm = reno
 
 [system_configuration]
 

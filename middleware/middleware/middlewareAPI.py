@@ -17,10 +17,13 @@ class MiddlewareReliable:
 
         # TODO: Force tcp to not use ip or tcp options when sending data.
         #       This will reduce overhead from 120 bytes to 40
-        ip_header_size = 60
-        tcp_header_size = 60
+        ip_header_size = 20  # IP_OPTIONS are forced off below
+        tcp_header_size = 20 # TCP options are only used in SYN,ACK and mss is not affected by this
         mss = config.mtu - ip_header_size - tcp_header_size
         self._socko.setsockopt(IPPROTO_TCP, TCP_MAXSEG, mss)
+        self._socko.setsockopt(IPPROTO_IP, IP_OPTIONS, b'')
+        self._socko.setsockopt(IPPROTO_TCP, TCP_CONGESTION, config.congestion_algorithm.encode("utf-8"))
+        #self._socko.setsockopt(IPPROTO_IP, IP_MTU_DISCOVER, IP_PMTUDISC_DO) TODO: is path MTU discovery something we want?
 
     def bind(self, address: tuple[str, int]) -> None:
         """
@@ -98,6 +101,8 @@ class MiddlewareUnreliable:
 
     def __init__(self):
         self._socko = socket(AF_INET, SOCK_DGRAM)
+        #self._socko.setsockopt(IPPROTO_IP, IP_MTU_DISCOVER, IP_PMTUDISC_DO) TODO: is path MTU discovery something we want?
+
         self._fragmenter = fragmentation.Fragmenter()
         self._reassembler = fragmentation.Reassembler()
 

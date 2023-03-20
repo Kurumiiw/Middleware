@@ -47,6 +47,7 @@ class Config:
 
     middleware_configuration: ConfigSection
     fragment_timeout: int
+    congestion_algorithm: str
 
     system_configuration: ConfigSection
     # see https://docs.kernel.org/networking/ip-sysctl.html
@@ -133,6 +134,17 @@ class Config:
                             else:
                                 raise ConfigParsingError(
                                     "Cannot set {} to {}. Illegal boolean value.".format(
+                                        var.name, value
+                                    )
+                                )
+                        elif var.type == str:
+                            value = value # Strings are kept as is, no quotation
+                        elif var.type == float:
+                            try:
+                                value = float(value)
+                            except:
+                                raise ConfigParsingError(
+                                    "Cannot set {} to {}. Illegal floating point value.".format(
                                         var.name, value
                                     )
                                 )
