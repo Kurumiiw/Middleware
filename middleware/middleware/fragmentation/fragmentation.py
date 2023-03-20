@@ -1,5 +1,7 @@
+from __future__ import annotations
 from middleware.configuration.config import config
 from typing import Optional
+from collections import defaultdict
 import time
 import math
 
@@ -49,13 +51,13 @@ class Fragmenter:
 
 
 class Reassembler:
-    datagrams: dict
+    datagrams: defaultdict[tuple[str, int], DatagramStoreEntry]
 
     class DatagramStoreEntry:
         timestamp: float
         is_fin: bool
         expected_frag_count: int
-        frag_store: dict
+        frag_store: dict[int, bytes]
 
         def __init__(self):
             self.timestamp = time.perf_counter()
@@ -64,7 +66,9 @@ class Reassembler:
             self.frag_store = {}
 
     def __init__(self):
-        self.datagrams = {}
+        self.datagrams: defaultdict[
+            tuple[str, int], self.DatagramStoreEntry
+        ] = defaultdict(self.DatagramStoreEntry)
 
     def timeout_old_datagrams(self) -> None:
         """
@@ -88,9 +92,6 @@ class Reassembler:
         dgram_id = (header_bits >> 12) & ((1 << DGRAM_ID_BITS) - 1)
         is_fin = bool(header_bits & (1 << 11))
         frag_idx = header_bits & ((1 << FRAG_IDX_BITS) - 1)
-
-        if (addr, dgram_id) not in self.datagrams:
-            self.datagrams[addr, dgram_id] = self.DatagramStoreEntry()
 
         self.datagrams[addr, dgram_id].timestamp = time.perf_counter()
         self.datagrams[addr, dgram_id].frag_store[frag_idx] = payload
