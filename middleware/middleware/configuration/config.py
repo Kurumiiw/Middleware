@@ -47,16 +47,12 @@ class Config:
 
     middleware_configuration: ConfigSection
     fragment_timeout: int
-    expected_congestion: int
-    expected_bandwidth: int
-    expected_packet_loss: int
-    expected_jitter: int
 
     system_configuration: ConfigSection
     # see https://docs.kernel.org/networking/ip-sysctl.html
-    tcp_frto: int
-    tcp_reflect_tos: bool
-    tcp_sack: bool
+    #tcp_frto: int
+    #tcp_reflect_tos: bool
+    #tcp_sack: bool
 
     def get_var(self, var_name: str) -> any:
         # NOTE: This is just a check to avoid using config variables
