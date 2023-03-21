@@ -67,9 +67,9 @@ class MiddlewareReliable:
 
     def settimeout(self, timeout_s: float) -> None:
         """
-        Sets the current timeout for blocking operations (accept/connect/send/sendall/recv), None signifies an infinite timeout
+        Sets the current timeout (in seconds) for blocking operations (accept/connect/send/sendall/recv), None signifies an infinite timeout
         """
-        self._socko.settimeout(timeout)
+        self._socko.settimeout(timeout_s)
 
     def gettimeout(self) -> float:
         """
@@ -87,7 +87,7 @@ class MiddlewareReliable:
         """
         Returns the current TOS value used for outbound packets
         """
-        self._socko.getsockopt(IPPROTO_IP, IP_TOS)
+        return self._socko.getsockopt(IPPROTO_IP, IP_TOS)
 
     def close(self) -> None:
         """Banishes the socket from the mortal realm"""
@@ -114,9 +114,9 @@ class MiddlewareUnreliable:
 
     def settimeout(self, timeout_s: float) -> None:
         """
-        Sets the current timeout for blocking operations (sendto/recvfrom), None signifies an infinite timeout
+        Sets the current timeout (in seconds) for blocking operations (sendto/recvfrom), None signifies an infinite timeout
         """
-        self._socko.settimeout(timeout)
+        self._socko.settimeout(timeout_s)
 
     def gettimeout(self) -> float:
         """
@@ -134,9 +134,10 @@ class MiddlewareUnreliable:
         """
         Returns the current TOS value used for outbound packets
         """
-        self._socko.getsockopt(IPPROTO_IP, IP_TOS)
+        return self._socko.getsockopt(IPPROTO_IP, IP_TOS)
 
-    def get_max_payload_size(self) -> int:
+    @staticmethod
+    def get_max_payload_size() -> int:
         """
         Returns the maximum payload size than can be sent with a single MiddlewareUnrelaible datagram (single call to sendto)
         """
@@ -166,16 +167,15 @@ class MiddlewareUnreliable:
             # NOTE: Probe received fragment size
             buffer_size = config.mtu
             while True:
-                try:
-                    self._socko.recvfrom(buffer_size, MSG_PEEK)
-                    break
-                except TimeoutError as err:
-                    raise err
-                except OSError:
+                _, _, msg_flags, _ = self._socko.recvmsg(buffer_size, 0, MSG_PEEK)
+                if msg_flags == MSG_TRUNC:
                     buffer_size *= 2
                     continue
+                else:
+                    break
 
-            frag, addr = self._socko.recvfrom(buffer_size)
+            frag, _, msg_flags, addr = self._socko.recvmsg(buffer_size)
+            assert (msg_flags & MSG_TRUNC) == 0
 
             # NOTE: Old datagrams (partial/complete datagrams containing old fragments) are timed out after the blocking socket.recvfrom
             #       operation has completed to avoid datagram id collisions when a lot of time is spent in socket.recvfrom
