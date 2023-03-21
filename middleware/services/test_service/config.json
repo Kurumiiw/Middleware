@@ -1,0 +1,42 @@
+{
+    "workers": [
+        {
+            "mtu": 1500,
+            "name": "worker_1",
+            "TOS": 60,
+            "reliable": true,
+            "port": 56456,
+            
+            "packet_size": 10000,
+            "packet_size_variance": 0.0,
+
+            "send_interval": 0,
+            "send_interval_variance": 0.0,
+
+            "burst_size": 50,
+            "burst_size_variance": 0.0,
+            "burst_interval": 20,
+            "burst_interval_variance": 0.0
+
+        },
+        {
+            "mtu": 1500,
+            "name": "worker_2",
+            "TOS": 60,
+            "reliable": true,
+            "port": 5000,
+            
+            "packet_size": 10000,
+            "packet_size_variance": 0.0,
+
+            "send_interval": 0,
+            "send_interval_variance": 0.0,
+
+            "burst_size": 50,
+            "burst_size_variance": 0.0,
+            "burst_interval": 20,
+            "burst_interval_variance": 0.0
+
+        }
+    ]
+}
