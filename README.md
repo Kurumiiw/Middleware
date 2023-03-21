@@ -53,17 +53,14 @@ Make sure the import path to middleware.middlewareAPI is correct depending on wh
 **Reliable:**
 Reliable communication requires at least two threads to function, since one will need to connect while the other one accepts.
 
-````python
+```python
     from middleware.middlewareAPI import *
     import threading
-
     def waitForPacket(mwSocket):
         conn, addr = mwSocket.accept()
         conn.send(b"General Kenobi")
-
     mwReceive = MiddlewareAPI.reliable("", 5001)
     mwSend = MiddlewareAPI.reliable("", 5006)
-
     mwReceive.bind(("", 5001))
     mwReceive.listen()
     threading.Thread(target=waitForPacket, args=(mwReceive,)).start()
@@ -83,4 +80,6 @@ Do the following while in the subfolder `middleware/`
 - To activate virtual environment: `poetry shell`
 - To add dependencies: `poetry add [-D] X` (Use -D for development dependencies)
 
-````
+```
+
+```
