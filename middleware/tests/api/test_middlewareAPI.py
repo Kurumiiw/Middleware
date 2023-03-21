@@ -122,6 +122,7 @@ def test_sending_and_receiving_large_file_unreliable():
     mwReceive.close()
     mwSend.close()
 
+
 def test_tos_unreliable():
     receiver = MiddlewareUnreliable()
     sender = MiddlewareUnreliable()
@@ -134,6 +135,7 @@ def test_tos_unreliable():
 
     receiver.close()
     sender.close()
+
 
 @pytest.mark.skip("FIX THIS")
 def test_tos_reliable():
@@ -149,6 +151,7 @@ def test_tos_reliable():
     receiver.close()
     sender.close()
 
+
 @pytest.mark.slow
 def test_settimeout_unreliable():
     sock = MiddlewareUnreliable()
@@ -162,7 +165,7 @@ def test_settimeout_unreliable():
         sock.recvfrom()
 
     for i in range(1, 4):
-        timeout = 0.5*i
+        timeout = 0.5 * i
         sock.settimeout(timeout)
         assert sock.gettimeout() == timeout
 
@@ -171,14 +174,14 @@ def test_settimeout_unreliable():
             sock.recvfrom()
 
         end = time.perf_counter()
-        
+
         assert abs((end - start) - timeout) <= timeout
 
     sock.close()
 
+
 @pytest.mark.slow
 def test_settimeout_reliable():
-
     # TODO: Also test connect, send and receive
     receiver = MiddlewareReliable()
     receiver.bind(("", 9000))
@@ -190,7 +193,7 @@ def test_settimeout_reliable():
         receiver.accept()
 
     for i in range(1, 4):
-        timeout = 0.5*i
+        timeout = 0.5 * i
         receiver.settimeout(timeout)
         assert receiver.gettimeout() == timeout
 

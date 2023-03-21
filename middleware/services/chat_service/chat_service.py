@@ -117,7 +117,9 @@ class ChatService:
         Connects to a hosted chat and starts a thread to listen for data.
         """
         self.mw.connect(address)
-        threading.Thread(target=self.receiveAndPrintMessages, args=(), daemon=True).start()
+        threading.Thread(
+            target=self.receiveAndPrintMessages, args=(), daemon=True
+        ).start()
         print(f"\nConnected to chat on {address}\n")
         self.sendData()
 
