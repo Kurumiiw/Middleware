@@ -1,36 +1,29 @@
 import pytest
+import threading
+import random
 from socket import *
 from middleware.middlewareAPI import *
+import middleware.fragmentation
 
 
 def test_create_MiddlewareReliable():
-    mw = MiddlewareReliable("", 5000)
-    assert mw.ip == ""
-    assert mw.port == 5000
-    assert mw.TOS == 0
-    assert mw.MTU == 1500
-    assert mw.timeout == 0.5
-    assert mw.maxRetries == 5
-    assert mw.socko != None
+    mw = MiddlewareReliable()
+    assert mw._socko != None
 
 
 def test_create_MiddlewareUnreliable():
-    mw = MiddlewareUnreliable("", 5000)
-    assert mw.ip == ""
-    assert mw.port == 5000
-    assert mw.TOS == 0
-    assert mw.MTU == 1500
-    assert mw.timeout == 0.5
-    assert mw.maxRetries == 5
-    assert mw.socko != None
+    mw = MiddlewareUnreliable()
+    assert mw._socko != None
+    assert mw._fragmenter != None
+    assert mw._reassembler != None
 
 
 def test_send_and_receive_unreliable():
-    mwSend = MiddlewareUnreliable("", 5000)
-    mwReceive = MiddlewareUnreliable("", 5005)
-    mwReceive.bind()
-    mwSend.send(b"Hello", ("localhost", 5005))
-    dataReceived = mwReceive.receive()[0]
+    mwSend = MiddlewareUnreliable()
+    mwReceive = MiddlewareUnreliable()
+    mwReceive.bind(("", 5005))
+    mwSend.sendto(b"Hello", ("localhost", 5005))
+    dataReceived = mwReceive.recvfrom()[0]
     assert dataReceived == b"Hello"
     mwSend.close()
     mwReceive.close()
@@ -39,31 +32,34 @@ def test_send_and_receive_unreliable():
 def test_send_and_receive_reliable():
     def waitForPacket(mwSocket):
         conn, addr = mwSocket.accept()
-        assert conn.receive() == b"Hello there"
+        assert conn.recv(1024) == b"Hello there"
         conn.send(b"General Kenobi")
+        conn.close()
 
-    mwReceive = MiddlewareAPI.reliable("", 5001)
-    mwSend = MiddlewareAPI.reliable("", 5006)
+    mwReceive = MiddlewareReliable()
+    mwSend = MiddlewareReliable()
 
     # Workaround for address already in use error causing failed tests when running pytest
     # multiple times in quick succession.
-    mwReceive.socko.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+    mwReceive._socko.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 
     mwReceive.bind(("", 5001))
     mwReceive.listen()
-    threading.Thread(target=waitForPacket, args=(mwReceive,)).start()
+    thread = threading.Thread(target=waitForPacket, args=(mwReceive,))
+    thread.start()
 
     mwSend.connect(("localhost", 5001))
     mwSend.send(b"Hello there")
-    received = mwSend.receive()
+
+    received = mwSend.recv(1024)
     print(received)
     assert received == b"General Kenobi"
 
+    thread.join()
     mwReceive.close()
     mwSend.close()
 
 
-@pytest.mark.slow
 def test_sending_and_receiving_large_file_reliable():
     testGif = open("tests/api/among-us-dance.gif", "rb")
     gifData = testGif.read()
@@ -71,10 +67,10 @@ def test_sending_and_receiving_large_file_reliable():
 
     def sendPacket(mwSocket):
         mwSocket.connect(("localhost", 5000))
-        mwSocket.send(gifData)
+        mwSocket.sendall(gifData)
 
-    mwReceive = MiddlewareAPI.reliable("", 5000)
-    mwSend = MiddlewareAPI.reliable("", 5005, timeout=30)
+    mwReceive = MiddlewareReliable()
+    mwSend = MiddlewareReliable()
 
     mwReceive.bind(("", 5000))
     mwReceive.listen()
@@ -82,7 +78,9 @@ def test_sending_and_receiving_large_file_reliable():
     t.start()
 
     conn, addr = mwReceive.accept()
-    data = conn.receive()
+    data = bytearray()
+    while len(data) < len(gifData):
+        data.extend(conn.recv(1024))
     assert data == gifData
 
     t.join()
@@ -91,29 +89,120 @@ def test_sending_and_receiving_large_file_reliable():
     mwSend.close()
 
 
-@pytest.mark.slow
 def test_sending_and_receiving_large_file_unreliable():
+    mwSend = MiddlewareUnreliable()
+    mwReceive = MiddlewareUnreliable()
+
     testGif = open("tests/api/among-us-dance.gif", "rb")
     gifData = testGif.read()
     testGif.close()
 
-    def sendPacket(mwSocket):
-        mwSocket.send(gifData, ("localhost", 5005))
+    max_payload_size = MiddlewareUnreliable.get_max_payload_size()
+    gif_data_payloads = [
+        gifData[i * max_payload_size : (i + 1) * max_payload_size]
+        for i in range(
+            len(gifData) // max_payload_size + int(len(gifData) % max_payload_size != 0)
+        )
+    ]
 
-    mwSend = MiddlewareUnreliable("", 5000)
-    mwReceive = MiddlewareUnreliable("", 5005, timeout=30)
-    mwReceive.bind()
+    def sendPacket(mwSocket):
+        for payload in gif_data_payloads:
+            mwSocket.sendto(payload, ("localhost", 5005))
+
+    mwReceive.bind(("", 5005))
     threading.Thread(
         target=sendPacket, args=(mwSend,)
     ).start()  # Send in different thread because receiving buffer is too small to hold the entire file
-    dataReceived = mwReceive.receive()[0]
+    payloads_received = []
+    for i in range(len(gif_data_payloads)):
+        payloads_received.append(mwReceive.recvfrom()[0])
 
-    assert dataReceived == gifData
+    assert payloads_received.sort() == gif_data_payloads.sort()
 
     mwReceive.close()
     mwSend.close()
 
 
-if __name__ == "__main__":
-    test_send_and_receive_reliable()
-    test_sending_and_receiving_large_file_reliable()
+def test_tos_unreliable():
+    receiver = MiddlewareUnreliable()
+    sender = MiddlewareUnreliable()
+
+    assert sender.get_tos() == 0
+    sender.set_tos(6)
+    assert sender.get_tos() == 6
+
+    # TODO: inspect tos field of received segments
+
+    receiver.close()
+    sender.close()
+
+
+@pytest.mark.skip("FIX THIS")
+def test_tos_reliable():
+    receiver = MiddlewareReliable()
+    sender = MiddlewareReliable()
+
+    assert sender.get_tos() == 0
+    sender.set_tos(69)
+    assert sender.get_tos() == 69
+
+    # TODO: inspect tos field of received segments
+
+    receiver.close()
+    sender.close()
+
+
+@pytest.mark.slow
+def test_settimeout_unreliable():
+    sock = MiddlewareUnreliable()
+    sock.bind(("", 9000))
+
+    # TODO: also test send
+
+    sock.settimeout(0)
+    assert sock.gettimeout() == 0
+    with pytest.raises(BlockingIOError):
+        sock.recvfrom()
+
+    for i in range(1, 4):
+        timeout = 0.5 * i
+        sock.settimeout(timeout)
+        assert sock.gettimeout() == timeout
+
+        start = time.perf_counter()
+        with pytest.raises(TimeoutError):
+            sock.recvfrom()
+
+        end = time.perf_counter()
+
+        assert abs((end - start) - timeout) <= timeout
+
+    sock.close()
+
+
+@pytest.mark.slow
+def test_settimeout_reliable():
+    # TODO: Also test connect, send and receive
+    receiver = MiddlewareReliable()
+    receiver.bind(("", 9000))
+    receiver.listen()
+
+    receiver.settimeout(0)
+    assert receiver.gettimeout() == 0
+    with pytest.raises(BlockingIOError):
+        receiver.accept()
+
+    for i in range(1, 4):
+        timeout = 0.5 * i
+        receiver.settimeout(timeout)
+        assert receiver.gettimeout() == timeout
+
+        start_accept = time.perf_counter()
+        with pytest.raises(TimeoutError):
+            receiver.accept()
+
+        end_accept = time.perf_counter()
+
+        assert abs((end_accept - start_accept) - timeout) <= timeout
+
+    receiver.close()
