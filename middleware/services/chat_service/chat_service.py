@@ -1,4 +1,5 @@
 from middleware.middlewareAPI import *
+import threading
 
 
 class ChatService:
@@ -10,8 +11,9 @@ class ChatService:
         self.hostConnections: list[MiddlewareReliable] = []
         self.address = address
         self.name = name
-        self.mw = MiddlewareAPI.reliable(address[0], address[1], timeout=None)
+        self.mw = MiddlewareReliable()
         self.mw.bind(self.address)
+        self.mw.settimeout(None)
         self.active = True
 
     def hostChat(self) -> None:
@@ -53,7 +55,7 @@ class ChatService:
         print(f"\n{addr[0]}:{addr[1]} joined the chat\n")
         while True:
             try:
-                data = conn.receive().decode("utf-8")
+                data = conn.recv(1024).decode("utf-8")
             except ConnectionResetError:
                 self.hostConnections.remove(conn)
                 self.distributeData(
@@ -119,7 +121,9 @@ class ChatService:
         Connects to a hosted chat and starts a thread to listen for data.
         """
         self.mw.connect(address)
-        threading.Thread(target=self.receiveData, args=(), daemon=True).start()
+        threading.Thread(
+            target=self.receiveAndPrintMessages, args=(), daemon=True
+        ).start()
         print(f"\nConnected to chat on {address}\n")
         self.sendData()
 
@@ -151,7 +155,7 @@ class ChatService:
         Receives data from the host
         """
         try:
-            data = self.mw.receive()
+            data = self.mw.recv(1024)
             return data
         except ConnectionResetError:
             self.close()

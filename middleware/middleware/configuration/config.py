@@ -47,16 +47,13 @@ class Config:
 
     middleware_configuration: ConfigSection
     fragment_timeout: int
-    expected_congestion: int
-    expected_bandwidth: int
-    expected_packet_loss: int
-    expected_jitter: int
+    congestion_algorithm: str
 
     system_configuration: ConfigSection
     # see https://docs.kernel.org/networking/ip-sysctl.html
-    tcp_frto: int
-    tcp_reflect_tos: bool
-    tcp_sack: bool
+    # tcp_frto: int
+    # tcp_reflect_tos: bool
+    # tcp_sack: bool
 
     def get_var(self, var_name: str) -> any:
         # NOTE: This is just a check to avoid using config variables
@@ -75,6 +72,7 @@ class Config:
         return self.default_generated_get_var(var_name)
 
     def set_var(self, var_name: str, value: any):
+        """
         if var_name in [var.name for var in self._system_configuration_var_list]:
             if var_name == "tcp_frto":
                 os.system("sysctl -w net.ipv4.tcp_frto={}".format(value))
@@ -84,6 +82,7 @@ class Config:
                 )
             elif var_name == "tcp_sack":
                 os.system("sysctl -w net.ipv4.tcp_sack={}".format(1 if value else 0))
+        """
 
         return self.default_generated_set_var(var_name, value)
 
@@ -138,6 +137,17 @@ class Config:
                                         var.name, value
                                     )
                                 )
+                        elif var.type == str:
+                            value = value  # Strings are kept as is, no quotation
+                        elif var.type == float:
+                            try:
+                                value = float(value)
+                            except:
+                                raise ConfigParsingError(
+                                    "Cannot set {} to {}. Illegal floating point value.".format(
+                                        var.name, value
+                                    )
+                                )
                         else:
                             assert False, "Not implemented"
 
@@ -163,3 +173,4 @@ class Config:
 
 
 config = Config()
+config.load_from_file("middleware/configuration/config.ini")

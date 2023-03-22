@@ -88,6 +88,17 @@ Reliable communication requires at least two threads to function, since one will
     print(received)
 ```
 
+### Configuration options
+
+Currently we support the following configuration options (See an example configuration file in `middleware/middleware/configuration/config.ini`
+
+- _MTU_: Allows setting the Maximum Transmission Unit for the underlying network, to prevent relying on [IP fragmentation](https://datatracker.ietf.org/doc/rfc8900/).
+- _TCP Congestion algorithm_: Allows setting the congestion control algorithm used by TCP. Currently we support [cubic](https://en.wikipedia.org/wiki/CUBIC_TCP), [reno](https://datatracker.ietf.org/doc/rfc5681/), [vegas](https://en.wikipedia.org/wiki/TCP_Vegas)`
+- [_tcp_frto_](https://www.rfc-editor.org/rfc/rfc5682): Whether to use Forward RTO-Recovery.
+- _tcp_reflect_tos_: Whether to reflect the IP ToS field.
+- [_tcp_sack_](https://www.rfc-editor.org/rfc/rfc2018): Whether to use selective acknowledgements.
+- _fragment_timeout_: How long to wait after receiving the first fragment in a sequence, before discarding due to timeout, if incomplete. Configured in milliseconds.
+
 ## Poetry
 
 **Note:** This is not necessary to run the middleware normally, as no dependencies outside the Python standard library are required!
