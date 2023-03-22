@@ -137,14 +137,13 @@ def test_tos_unreliable():
     sender.close()
 
 
-@pytest.mark.skip("FIX THIS")
 def test_tos_reliable():
     receiver = MiddlewareReliable()
     sender = MiddlewareReliable()
 
     assert sender.get_tos() == 0
-    sender.set_tos(69)
-    assert sender.get_tos() == 69
+    sender.set_tos(88)
+    assert sender.get_tos() == 88
 
     # TODO: inspect tos field of received segments
 
