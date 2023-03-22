@@ -14,7 +14,7 @@ To reassemble the fragmented packets at the receiving end, a header is prepended
 identifier when sending, and packets are reordered using this information when receiving (shown
 as ”Add header, Number” and ”Remove header, Reorder”).
 When reliable is used, the byte stream is sent and received using TCP, using the configured 
-MTU and congestion algorithm in the config file. For both the reliable and unreliable configurations 
+TCP options in the config file. For both the reliable and unreliable configurations 
 it is also possible to set the timeout for blocking operations, as well as the TOS value, through the API.
    
 
