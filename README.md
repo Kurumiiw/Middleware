@@ -1,5 +1,7 @@
 # FFI & NTNU Informatics Bachelor project collaboration 2023 - Middleware for networking services
 
+<img src="./documentation_images/header_1.png" alt="IT2901 Informatics Project II - NTNU & FFI: Network communication middleware"/>
+
 ## **System Architecture**
 
 <img src="./documentation_images/ffi_diag_ver_2.png" alt="System architecture diagram" style="width:50%;"/>
