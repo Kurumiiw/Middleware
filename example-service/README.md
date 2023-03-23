@@ -1,4 +1,4 @@
-# Readme
+# Example service
 
 This example service shows how to integrate the middleware in a new python
 project, with the middleware as a dependency. It does not implement any
