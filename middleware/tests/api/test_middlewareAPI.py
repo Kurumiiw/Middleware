@@ -1,7 +1,9 @@
 import pytest
 import threading
+import random
 from socket import *
 from middleware.middlewareAPI import *
+import middleware.fragmentation
 
 
 def test_create_MiddlewareReliable():
@@ -95,7 +97,7 @@ def test_sending_and_receiving_large_file_unreliable():
     gifData = testGif.read()
     testGif.close()
 
-    max_payload_size = mwSend.get_max_payload_size()
+    max_payload_size = MiddlewareUnreliable.get_max_payload_size()
     gif_data_payloads = [
         gifData[i * max_payload_size : (i + 1) * max_payload_size]
         for i in range(
@@ -121,6 +123,86 @@ def test_sending_and_receiving_large_file_unreliable():
     mwSend.close()
 
 
-if __name__ == "__main__":
-    test_send_and_receive_reliable()
-    test_sending_and_receiving_large_file_reliable()
+def test_tos_unreliable():
+    receiver = MiddlewareUnreliable()
+    sender = MiddlewareUnreliable()
+
+    assert sender.get_tos() == 0
+    sender.set_tos(6)
+    assert sender.get_tos() == 6
+
+    # TODO: inspect tos field of received segments
+
+    receiver.close()
+    sender.close()
+
+
+@pytest.mark.skip("FIX THIS")
+def test_tos_reliable():
+    receiver = MiddlewareReliable()
+    sender = MiddlewareReliable()
+
+    assert sender.get_tos() == 0
+    sender.set_tos(69)
+    assert sender.get_tos() == 69
+
+    # TODO: inspect tos field of received segments
+
+    receiver.close()
+    sender.close()
+
+
+@pytest.mark.slow
+def test_settimeout_unreliable():
+    sock = MiddlewareUnreliable()
+    sock.bind(("", 9000))
+
+    # TODO: also test send
+
+    sock.settimeout(0)
+    assert sock.gettimeout() == 0
+    with pytest.raises(BlockingIOError):
+        sock.recvfrom()
+
+    for i in range(1, 4):
+        timeout = 0.5 * i
+        sock.settimeout(timeout)
+        assert sock.gettimeout() == timeout
+
+        start = time.perf_counter()
+        with pytest.raises(TimeoutError):
+            sock.recvfrom()
+
+        end = time.perf_counter()
+
+        assert abs((end - start) - timeout) <= timeout
+
+    sock.close()
+
+
+@pytest.mark.slow
+def test_settimeout_reliable():
+    # TODO: Also test connect, send and receive
+    receiver = MiddlewareReliable()
+    receiver.bind(("", 9000))
+    receiver.listen()
+
+    receiver.settimeout(0)
+    assert receiver.gettimeout() == 0
+    with pytest.raises(BlockingIOError):
+        receiver.accept()
+
+    for i in range(1, 4):
+        timeout = 0.5 * i
+        receiver.settimeout(timeout)
+        assert receiver.gettimeout() == timeout
+
+        start_accept = time.perf_counter()
+        with pytest.raises(TimeoutError):
+            receiver.accept()
+
+        end_accept = time.perf_counter()
+
+        assert abs((end_accept - start_accept) - timeout) <= timeout
+
+    receiver.close()
