@@ -51,9 +51,9 @@ class Config:
 
     system_configuration: ConfigSection
     # see https://docs.kernel.org/networking/ip-sysctl.html
-    #tcp_frto: int
-    #tcp_reflect_tos: bool
-    #tcp_sack: bool
+    #   tcp_frto: int
+    #   tcp_reflect_tos: bool
+    #   tcp_sack: bool
 
     def get_var(self, var_name: str) -> any:
         # NOTE: This is just a check to avoid using config variables
@@ -138,7 +138,7 @@ class Config:
                                     )
                                 )
                         elif var.type == str:
-                            value = value # Strings are kept as is, no quotation
+                            value = value  # Strings are kept as is, no quotation
                         elif var.type == float:
                             try:
                                 value = float(value)
