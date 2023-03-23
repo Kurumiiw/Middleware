@@ -1,4 +1,4 @@
-# Middleware
+# FFI & NTNU Informatics Bachelor project collaboration 2023 - Middleware for networking services
 
 ## **System Architecture**
 
@@ -10,7 +10,7 @@ Despite what is shown in the diagram, the API is only byte stream based when usi
 communication, while the unreliable part of the API is message based.
 With unreliable, the messages are divided into an ordered list of ”data
 packets” (fragments) to fit with the Maximum Transmission Unit (MTU) of the network (shown
-as ”Split” and ”Merge” in Figure 2).
+as ”Split” and ”Merge”).
 To reassemble the fragmented packets at the receiving end, a header is prepended with a unique
 identifier when sending, and packets are reordered using this information when receiving (shown
 as ”Add header, Number” and ”Remove header, Reorder”).
@@ -143,7 +143,7 @@ but can be overridden per socket by this argument.
 
 &nbsp;
 
-> ### **MiddlewareUnrelaible.get_mss()**
+> ### **MiddlewareUnreliable.get_mss()**
 >
 > Gets the currently set MSS (Maximum Segment Size). This is equal to the current MTU - total header size.
 > No UDP datagram will be sent with a larger payload than this size. This is applies to each individual
@@ -183,7 +183,7 @@ Make sure the import path to middleware.middlewareAPI is correct depending on wh
 ```
 
 **Reliable:**
-Reliable communication requires at least two threads to function, since one will need to connect while the other one accepts.
+Reliable communication requires at least two threads to function if testing on a single machine, since one will need to connect while the other one accepts.
 
 ```python
     from middleware.middlewareAPI import *
@@ -216,27 +216,23 @@ Reliable communication requires at least two threads to function, since one will
 
 ### **Configuration options**
 
-Configuration is split into two categories: middleware configuration and system configuration. Each category has an INI file associated
-with it in the root directory of the repository.
+Configuration is split into two categories: middleware configuration and system configuration. Each category has an INI file associated with it in the root directory of the repository.
 
-System configuration must be applied manually by calling the script "configure_system.py"
-with sudo. This configures the TCP/IP stack according to system_config.ini. Each option is documented in the INI file.
+System configuration must be applied manually by calling the script "configure_system.py" with elevated privileges. This configures the TCP/IP stack according to system_config.ini. Each option is documented in the INI file.
 
 Middleware configuration is applied automatically when the middleware is loaded as a python module. As opposed to system configuration,
 middleware configuration will be loaded from the current working directory of the process that imported the middleware module, with
 the middleware_config.ini in the root directory as fallback. Each option available is documented in the middleware_config.ini file
 in the root directory. Note that all variables must be set by a middleware config INI file, and there may only be one section called
 "middleware_configuration". It is advised to copy to middleware_config.ini file in the root directory and modify this, intead of
-writing it from scratch. Additionally, the config system is not yet designed to
+writing it from scratch.
 
-Currently, the following options are available in the middleware config file:
+Currently, the following options are available in the config file:
 
-- mtu: default MTU assigned to each socket
-- fragment_timeout: amount of time to wait after receiving new fragments before discarding the whole datagram
-- congestion_algorithm: the congestion algorithm to use for MiddlewareReliable sockets, must be one of the allowed algorithms set in system configuration
-- echo_config_path: if true the middleware will print the path of which middleware config file it loaded during initialization
-
----
+- `mtu`: default MTU assigned to each socket
+- `fragment_timeout`: amount of time to wait after receiving new fragments before discarding the whole datagram
+- `congestion_algorithm`: the congestion algorithm to use for MiddlewareReliable sockets, must be one of the allowed algorithms set in system configuration
+- `echo_config_path`: if true the middleware will print the path of which middleware config file it loaded during initialization
 
 ## Using the middleware in custom applications
 
