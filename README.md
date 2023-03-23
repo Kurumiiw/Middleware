@@ -153,7 +153,7 @@ but can be overridden per socket by this argument.
 
 &nbsp;
 
-> ### **MiddlewareUnrelaible.get_max_payload_size()**
+> ### **MiddlewareUnreliable.get_max_payload_size()**
 >
 > Gets the maximum payload a single call to MiddlewareUnreliable.sendto() can handle. This is based on the
 > minimum possible MTU (64 bytes) and the number of fragment index bits (currently 11), which yields a
