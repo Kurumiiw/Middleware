@@ -14,7 +14,12 @@ def main():
         sys.exit(1)
 
     try:
-        result = subprocess.run(["modprobe", "tcp_vegas"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        result = subprocess.run(
+            ["modprobe", "tcp_vegas"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+        )
     except:
         error_print("Failed to load the kernel module for tcp vegas.")
         print("Reason:", result.stderr)
@@ -22,10 +27,34 @@ def main():
         sys.exit(1)
 
     try:
-        subprocess.run(["sysctl", "-w", "net.ipv4.tcp_congestion_control=vegas"], capture_output=True, check=True)
-        subprocess.run(["sysctl", "-w", "net.ipv4.tcp_congestion_control=reno"], capture_output=True, check=True)
-        subprocess.run(["sysctl", "-w", "net.ipv4.tcp_available_congestion_control=\"reno cubic vegas\""], capture_output=True, check=True)
-        subprocess.run(["sysctl", "-w", "net.ipv4.tcp_allowed_congestion_control=\"reno cubic vegas\""], capture_output=True, check=True)
+        subprocess.run(
+            ["sysctl", "-w", "net.ipv4.tcp_congestion_control=vegas"],
+            capture_output=True,
+            check=True,
+        )
+        subprocess.run(
+            ["sysctl", "-w", "net.ipv4.tcp_congestion_control=reno"],
+            capture_output=True,
+            check=True,
+        )
+        subprocess.run(
+            [
+                "sysctl",
+                "-w",
+                'net.ipv4.tcp_available_congestion_control="reno cubic vegas"',
+            ],
+            capture_output=True,
+            check=True,
+        )
+        subprocess.run(
+            [
+                "sysctl",
+                "-w",
+                'net.ipv4.tcp_allowed_congestion_control="reno cubic vegas"',
+            ],
+            capture_output=True,
+            check=True,
+        )
     except:
         error_print("Failed to force load tcp vegas. Exiting.")
         sys.exit(1)
@@ -44,7 +73,7 @@ def main():
         option_values = conf_reader.get(sys_conf_section_name, option)
         try:
             result = subprocess.run(
-                ["sysctl", "-w", 'net.ipv4.{}={}'.format(option, option_values)],
+                ["sysctl", "-w", "net.ipv4.{}={}".format(option, option_values)],
                 capture_output=True,
                 check=True,
             )
