@@ -1,4 +1,4 @@
-# FFI & NTNU Bachelor project collaboration 2023 - Middleware for networking services
+# FFI & NTNU Informatics Bachelor project collaboration 2023 - Middleware for networking services
 
 ## **System Architecture**
 
