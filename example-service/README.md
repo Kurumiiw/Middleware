@@ -2,8 +2,7 @@
 
 This example service shows how to integrate the middleware in a new python
 project, with the middleware as a dependency. It does not implement any
-functionality outside of the example given in the project. This example
-assumes that the middleware is located locally on the computer for now.
+functionality outside of the example given in the middleware readme.
 
 It assumes that `poetry` is already installed on the system.
 
@@ -28,8 +27,7 @@ middleware = { path = "/PATH/TO/MIDDLEWARE", develop = true }
   and install packages.
 
 - Copy the `example_service/main.py` file into the project and run it to
-  confirm it is working. (Note: at the time of writing this would _not_ work due
-  to missing configuration file).
+  confirm it is working.
 
 ## Using Github releases
 
