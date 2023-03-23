@@ -177,4 +177,4 @@ cwd = os.getcwd()
 if os.path.isfile(os.path.join(cwd, "config.ini")):
     config.load_from_file(os.path.join(cwd, "config.ini"))
 else:
-    config.load_from_file(os.path.join(cwd, os.path.dirname(__file__), "config.ini"))
+    config.load_from_file(os.path.join(os.path.dirname(__file__), "config.ini"))
