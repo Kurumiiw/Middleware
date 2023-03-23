@@ -4,9 +4,11 @@
 
 <img src="./documentation_images/ffi_diag_ver_2.png" alt="System architecture diagram" style="width:50%;"/>
 
-As shown in the diagram, the middleware exposes an API which enables sending and receiving a byte stream.
+As shown in the diagram, the middleware exposes an API which enables sending and receiving.
 The API is split between endpoints for reliable and unreliable communication.
-When using unreliable, the byte stream would then be divided into an ordered list of ”data
+Despite what is shown in the diagram, the API is only byte stream based when using reliable 
+communication, while the unrealiable part of the API is message based.
+With unreliable, the messages are divided into an ordered list of ”data
 packets” (fragments) to fit with the Maximum Transmission Unit (MTU) of the network (shown
 as ”Split” and ”Merge” in Figure 2).
 To reassemble the fragmented packets at the receiving end, a header is prepended with a unique
