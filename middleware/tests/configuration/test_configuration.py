@@ -29,14 +29,11 @@ def test_set_get():
 def test_save_to_file():
     test_config.save_to_file("tests/configuration/test_config_out.ini")
 
-    expected_content = """[network_properties]
+    expected_content = """[middleware_configuration]
 mtu = 200
-
-[middleware_configuration]
 fragment_timeout = 10
 congestion_algorithm = reno
-
-[system_configuration]
+echo_config_path = True
 
 """
 

@@ -3,7 +3,8 @@ import threading
 import random
 from socket import *
 from middleware.middlewareAPI import *
-import middleware.fragmentation
+import middleware.fragmentation.fragmentation as fragmentation
+from middleware.configuration.config import config
 
 
 def test_create_MiddlewareReliable():
@@ -110,17 +111,68 @@ def test_sending_and_receiving_large_file_unreliable():
             mwSocket.sendto(payload, ("localhost", 5005))
 
     mwReceive.bind(("", 5005))
-    threading.Thread(
+    thread = threading.Thread(
         target=sendPacket, args=(mwSend,)
-    ).start()  # Send in different thread because receiving buffer is too small to hold the entire file
+    )  # Send in different thread because receiving buffer is too small to hold the entire file
+    thread.start()
+
     payloads_received = []
     for i in range(len(gif_data_payloads)):
         payloads_received.append(mwReceive.recvfrom()[0])
 
     assert payloads_received.sort() == gif_data_payloads.sort()
 
+    thread.join()
     mwReceive.close()
     mwSend.close()
+
+
+def test_mtu_mss_reliable():
+    sock_0 = MiddlewareReliable()
+    sock_1 = MiddlewareReliable(mtu=config.mtu - 4)
+
+    tcp_ip_header_size = 40
+    assert sock_0.get_mtu() == config.mtu
+    assert sock_0.get_mss() == config.mtu - tcp_ip_header_size
+    assert sock_1.get_mtu() == (config.mtu - 4)
+    assert sock_1.get_mss() == (config.mtu - 4) - tcp_ip_header_size
+
+    sock_0.close()
+    sock_1.close()
+
+    sender = MiddlewareReliable()
+    receiver = MiddlewareReliable(mtu=config.mtu - 4)
+
+    receiver.bind(("", 6999))
+    receiver.listen()
+
+    def connect():
+        sender.connect(("localhost", 6999))
+
+    thread = threading.Thread(target=connect, args=())
+    thread.start()
+
+    conn, addr = receiver.accept()
+    assert conn.get_mtu() == receiver.get_mtu()
+    assert conn.get_mss() == receiver.get_mss()
+
+    thread.join()
+    receiver.close()
+    sender.close()
+
+
+def test_mtu_mss_unreliable():
+    sock_0 = MiddlewareUnreliable()
+    sock_1 = MiddlewareUnreliable(mtu=1024)
+
+    total_header_size = fragmentation.UDP_IP_HEADER_SIZE + fragmentation.MW_HEADER_SIZE
+    assert sock_0.get_mtu() == config.mtu
+    assert sock_0.get_mss() == config.mtu - total_header_size
+    assert sock_1.get_mtu() == 1024
+    assert sock_1.get_mss() == 1024 - total_header_size
+
+    sock_0.close()
+    sock_1.close()
 
 
 def test_tos_unreliable():

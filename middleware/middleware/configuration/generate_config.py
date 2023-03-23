@@ -1,10 +1,5 @@
 import collections
 
-
-class ConfigSection:
-    pass
-
-
 config_var_list_entry = collections.namedtuple("config_var_list_entry", "name type")
 
 
@@ -15,34 +10,11 @@ def generate_config(conf_class: type) -> type:
     variables = [key for key in conf_class.__annotations__]
     variables = list(filter(lambda name: not name.startswith("__"), variables))
 
-    section_names = list(
-        filter(
-            lambda name: conf_class.__annotations__[name] == ConfigSection, variables
-        )
-    )
-    Config._section_names = section_names
-
-    Config._network_properies_var_list = []
-    Config._middleware_configuration_var_list = []
-    Config._system_configuration_var_list = []
-
-    var_lists = [
-        Config._network_properies_var_list,
-        Config._middleware_configuration_var_list,
-        Config._system_configuration_var_list,
+    Config._var_list = [
+        config_var_list_entry(var, conf_class.__annotations__[var]) for var in variables
     ]
-    Config._var_lists = var_lists
 
-    # NOTE: [1:] to skip first section marker
-    for var in variables[1:]:
-        if var in section_names:
-            var_lists = var_lists[1:]
-        else:
-            var_lists[0].append(
-                config_var_list_entry(var, conf_class.__annotations__[var])
-            )
-
-    for var in filter(lambda name: name not in section_names, variables):
+    for var in variables:
         setattr(Config, "_" + var, None)
 
         setattr(
