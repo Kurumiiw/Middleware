@@ -14,21 +14,14 @@ class Config:
     loading and saving these.
 
     The content of this class is generated based on the template given below.
-    Annotations (such as _network_properties: ConfigSection and mtu: int) are
-    used to generate getters and settes automatically. This is ONLY done for
-    annotations, not variables. ALL config variables must therefore have no
-    default value (this is by design).
+    Annotations (mtu: int) are used to generate getters and settes automatically.
+    This is ONLY done for annotations, not variables. ALL config variables must
+    therefore have no default value (this is by design).
 
     The INI file format is used for serializing the configuration and the
-    format of the annotations below are made to reflect this. Annotations with
-    the type 'ConfigSection' are regarded as section names (specified as [name]
-    in the INI file). Every annotation below a section, before the next section
-    annotation, is regarded as part of this section (e.g. mtu is regarded as
-    part of the network_properties section). Annotations belonging to a section
+    format of the annotations below are made to reflect this. Annotations
     are added to the generated class with generated getters, setters and
-    serialization/deserialization. Sections are not added to the generated
-    class, and trying to access e.g. config.network_properties will fail.
-    Additionally, all variables belonging to a section must be set in the
+    serialization/deserialization. Additionally, all variables must be set in the
     config file for it to be valid.
 
     Config variables are generated as properties, meaning they behave as
@@ -36,24 +29,15 @@ class Config:
     and the setter when set (i.e config.mtu calls the getter for mtu). Each
     config variables has it's own getter and setter which calls the common
     get_var and set_var. This is to allow overriding what happens when a
-    variables is get/set (e.g. when a system config var is set, set_var might
-    do a system call to also set this in the kernel). When no special action
-    is wanted the 'default_generated_*et_var' is supplied, which just sets/gets
-    the variables normally.
+    variables is get/set. When no special action is wanted the
+    'default_generated_*et_var' is supplied, which just sets/gets the
+    variables normally.
     """
 
-    network_properties: ConfigSection
     mtu: int
-
-    middleware_configuration: ConfigSection
     fragment_timeout: int
     congestion_algorithm: str
-
-    system_configuration: ConfigSection
-    # see https://docs.kernel.org/networking/ip-sysctl.html
-    # tcp_frto: int
-    # tcp_reflect_tos: bool
-    # tcp_sack: bool
+    echo_config_path: bool
 
     def get_var(self, var_name: str) -> any:
         # NOTE: This is just a check to avoid using config variables
@@ -72,109 +56,100 @@ class Config:
         return self.default_generated_get_var(var_name)
 
     def set_var(self, var_name: str, value: any):
-        """
-        if var_name in [var.name for var in self._system_configuration_var_list]:
-            if var_name == "tcp_frto":
-                os.system("sysctl -w net.ipv4.tcp_frto={}".format(value))
-            elif var_name == "tcp_reflect_tos":
-                os.system(
-                    "sysctl -w net.ipv4.tcp_reflect_tos={}".format(1 if value else 0)
-                )
-            elif var_name == "tcp_sack":
-                os.system("sysctl -w net.ipv4.tcp_sack={}".format(1 if value else 0))
-        """
-
         return self.default_generated_set_var(var_name, value)
 
     def load_from_file(self, path: str):
-        section_names = self._section_names
-        var_lists = self._var_lists
-
         conf_reader = configparser.ConfigParser()
         conf_reader.read(path)
 
-        if conf_reader.sections() != section_names:
-            if not (set(conf_reader.sections()).issubset(section_names)):
+        section_name = "middleware_configuration"
+        if conf_reader.sections() != [section_name]:
+            raise ConfigParsingError(
+                "Invalid sections: {}. Only legal section is {}".format(
+                    set(conf_reader.sections()), section_name
+                )
+            )
+        else:
+            var_list = Config._var_list
+            var_names = [var.name for var in var_list]
+
+            if set(conf_reader.options(section_name)) != set(var_names):
                 raise ConfigParsingError(
-                    "Invalid sections: {}".format(
-                        set(conf_reader.sections()) - set(section_names)
+                    "Missing variables: {}".format(
+                        set(var_names) - set(conf_reader.options(section_name))
                     )
                 )
             else:
-                raise ConfigParsingError(
-                    "Missing sections: {}".format(
-                        set(section_names) - set(conf_reader.sections())
-                    )
-                )
-        else:
-            for section_index, section in enumerate(section_names):
-                var_list = var_lists[section_index]
-                var_names = [var.name for var in var_list]
+                for var in var_list:
+                    value = conf_reader.get(section_name, var.name)
 
-                if set(conf_reader.options(section)) != set(var_names):
-                    raise ConfigParsingError("Missing variables")
-                else:
-                    for var in var_list:
-                        value = conf_reader.get(section, var.name)
-
-                        if var.type == int:
-                            try:
-                                value = int(value)
-                            except:
-                                raise ConfigParsingError(
-                                    "Cannot set {} to {}. Illegal integral value.".format(
-                                        var.name, value
-                                    )
+                    if var.type == int:
+                        try:
+                            value = int(value)
+                        except:
+                            raise ConfigParsingError(
+                                "Cannot set {} to {}. Illegal integral value.".format(
+                                    var.name, value
                                 )
-                        elif var.type == bool:
-                            if value == "True":
-                                value = True
-                            elif value == "False":
-                                value = False
-                            else:
-                                raise ConfigParsingError(
-                                    "Cannot set {} to {}. Illegal boolean value.".format(
-                                        var.name, value
-                                    )
-                                )
-                        elif var.type == str:
-                            value = value  # Strings are kept as is, no quotation
-                        elif var.type == float:
-                            try:
-                                value = float(value)
-                            except:
-                                raise ConfigParsingError(
-                                    "Cannot set {} to {}. Illegal floating point value.".format(
-                                        var.name, value
-                                    )
-                                )
+                            )
+                    elif var.type == bool:
+                        if value == "True":
+                            value = True
+                        elif value == "False":
+                            value = False
                         else:
-                            assert False, "Not implemented"
+                            raise ConfigParsingError(
+                                "Cannot set {} to {}. Illegal boolean value.".format(
+                                    var.name, value
+                                )
+                            )
+                    elif var.type == str:
+                        value = value  # Strings are kept as is, no quotation
+                    elif var.type == float:
+                        try:
+                            value = float(value)
+                        except:
+                            raise ConfigParsingError(
+                                "Cannot set {} to {}. Illegal floating point value.".format(
+                                    var.name, value
+                                )
+                            )
+                    else:
+                        assert False, "Not implemented"
 
-                        self.set_var(var.name, value)
+                    self.set_var(var.name, value)
 
     def save_to_file(self, path: str):
-        section_names = self._section_names
-        var_lists = self._var_lists
-
         conf_writer = configparser.ConfigParser()
 
-        for section in section_names:
-            conf_writer.add_section(section)
+        section_name = "middleware_configuration"
+        conf_writer.add_section(section_name)
 
-        for section_index, section_var_list in enumerate(var_lists):
-            section = section_names[section_index]
-
-            for var in section_var_list:
-                conf_writer.set(section, var.name, str(self.get_var(var.name)))
+        for var in Config._var_list:
+            conf_writer.set(section_name, var.name, str(self.get_var(var.name)))
 
         with open(path, "w") as file_writer:
             conf_writer.write(file_writer, space_around_delimiters=True)
 
 
 config = Config()
-cwd = os.getcwd()
-if os.path.isfile(os.path.join(cwd, "config.ini")):
-    config.load_from_file(os.path.join(cwd, "config.ini"))
-else:
-    config.load_from_file(os.path.join(os.path.dirname(__file__), "config.ini"))
+
+
+def _load_config():
+    cwd = os.getcwd()
+    cwd_config_path = os.path.join(cwd, "middleware_config.ini")
+
+    chosen_path: str
+    if os.path.isfile(cwd_config_path):
+        chosen_path = cwd_config_path
+    else:
+        chosen_path = os.path.join(
+            os.path.dirname(__file__), "..", "..", "..", "middleware_config.ini"
+        )
+
+    config.load_from_file(chosen_path)
+    if config.echo_config_path:
+        print("Middleware config loaded from {}".format(chosen_path))
+
+
+_load_config()
