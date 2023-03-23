@@ -7,7 +7,7 @@
 As shown in the diagram, the middleware exposes an API which enables sending and receiving.
 The API is split between endpoints for reliable and unreliable communication.
 Despite what is shown in the diagram, the API is only byte stream based when using reliable
-communication, while the unrealiable part of the API is message based.
+communication, while the unreliable part of the API is message based.
 With unreliable, the messages are divided into an ordered list of ”data
 packets” (fragments) to fit with the Maximum Transmission Unit (MTU) of the network (shown
 as ”Split” and ”Merge” in Figure 2).
@@ -26,13 +26,13 @@ Our middleware aims to be equivalent to the Python socket API in the functions i
 
 After importing the API, we begin our journey by initializing either a MiddlewareReliable or a MiddlewareUnreliable object. Both
 objects have a constructor that accepts an MTU. This MTU is by default set to the value loaded from the middleware config file,
-but can be overidden per socket by this argument.
+but can be overridden per socket by this argument.
 
 > ### **MiddlewareReliable.connect(address)**
 >
 > Connect to a remote socket at address. (The format of address depends on the address family — see above.)
 >
-> If the connection is interrupted by a signal, the method waits until the connection completes, or raise a TimeoutError on timeout, if the signal handler doesn’t raise an exception and the socket is blocking or has a timeout. For non-blocking sockets, the method raises an InterruptedError exception if the connection is interrupted by a signal (or the exception raised by the signal handler).
+> If the connection is interrupted by a signal, the method waits until the connection completes, or raises a TimeoutError on timeout, if the signal handler doesn’t raise an exception and the socket is blocking or has a timeout. For non-blocking sockets, the method raises an InterruptedError exception if the connection is interrupted by a signal (or the exception raised by the signal handler).
 >
 > Raises an auditing event socket.connect with arguments self, address.
 
@@ -75,7 +75,7 @@ but can be overidden per socket by this argument.
 
 > ### **MiddlewareReliable.accept()**
 >
-> Accept a connection. The socket must be bound to an address and listening for connections. The return value is a pair (conn, address) where conn is a new socket object usable to send and receive data on the connection, and address is the address bound to the socket on the other end of the connection.
+> Accept a connection. The socket must be bound to an address and must be listening for connections. The return value is a pair (conn, address) where conn is a new socket object usable to send and receive data on the connection, and address is the address bound to the socket on the other end of the connection.
 
 &nbsp;
 
@@ -99,7 +99,7 @@ but can be overidden per socket by this argument.
 >
 > Sets the timeout for blocking operations to timeout_s seconds. A value of None makes all blocking operations block, a value of 0 makes
 > all blocking operations non-blocking and raise an exception (BlockingIOError) if it would block. A value > 0 will result in an exception
-> (TimeoutError) when a blocking operations takes more than timeout_s seconds to complete.
+> (TimeoutError) when a blocking operation takes more than timeout_s seconds to complete.
 
 &nbsp;
 
@@ -220,7 +220,7 @@ Configuration is split into two categories: middleware configuration and system 
 with it in the root directory of the repository.
 
 System configuration must be applied manually by calling the script "configure_system.py"
-with sudo. This configure the TCP/IP stack according to system_config.ini. Each option is documented in the INI file.
+with sudo. This configures the TCP/IP stack according to system_config.ini. Each option is documented in the INI file.
 
 Middleware configuration is applied automatically when the middleware is loaded as a python module. As opposed to system configuration,
 middleware configuration will be loaded from the current working directory of the process that imported the middleware module, with
@@ -240,7 +240,7 @@ Currently, the following options are available in the middleware config file:
 
 ## Using the middleware in custom applications
 
-A barebones example of how to use poetry is shown in `example-service/`. This can be used as a starting point to create applications on top of the middleware. Details for how to do this is explained in detail in the [example-service README](./example-service/README.md).
+A barebones example of how to use poetry is shown in `example-service/`. This can be used as a starting point to create applications on top of the middleware. Details for how to do this are explained in detail in the [example-service README](./example-service/README.md).
 
 ## **Poetry**
 
