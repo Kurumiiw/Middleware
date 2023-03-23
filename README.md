@@ -1,4 +1,6 @@
-# FFI & NTNU Informatics Bachelor project collaboration 2023 - Middleware for networking services
+# FFI & NTNU Informatics Bachelor project collaboration 2023 - Network communication middleware
+
+<img src="./documentation_images/header_1.png" alt="IT2901 Informatics Project II - NTNU & FFI: Network communication middleware"/>
 
 ## **System Architecture**
 
@@ -237,13 +239,3 @@ Currently, the following options are available in the config file:
 ## Using the middleware in custom applications
 
 A barebones example of how to use poetry is shown in `example-service/`. This can be used as a starting point to create applications on top of the middleware. Details for how to do this are explained in detail in the [example-service README](./example-service/README.md).
-
-## **Poetry**
-
-**Note:** This is not necessary to run the middleware normally, as no dependencies outside the Python standard library are required!
-
-Do the following while in the subfolder `middleware/`
-
-- To install dependencies: `poetry install`
-- To activate virtual environment: `poetry shell`
-- To add dependencies: `poetry add [-D] X` (Use -D for development dependencies)
