@@ -40,7 +40,7 @@ example with `{ git = ... }`. For instance:
 ```
 [tool.poetry.dependencies]
 python = "^3.10"
-middleware = { git = "https://github.com/Kurumiiw/Middleware.git", tag = "v0.1.0RC2", subdirectory="middleware" }
+middleware = { git = "https://github.com/Kurumiiw/Middleware.git", tag = "v0.1.0", subdirectory="middleware" }
 ```
 
 A list of releases is provided [here](https://github.com/Kurumiiw/Middleware/releases)
