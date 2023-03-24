@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "middleware"
-version = "0.1.0"
+version = "0.2.0"
 description = ""
 authors = ["thorbjoernl <51087536+thorbjoernl@users.noreply.github.com>"]
 readme = "README.md"
