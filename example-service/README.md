@@ -32,14 +32,15 @@ middleware = { path = "/PATH/TO/MIDDLEWARE", develop = true }
 
 ## Using Github releases
 
-Alternatively the dependency can be specified directly from a packaged release on Github.
-A [url dependency](https://python-poetry.org/docs/dependency-specification/#url-dependencies) is specified by replacing the `middleware = ` line in the path dependencies
-example with `{ url = ... }`. For instance:
+We have not yet found a way for `poetry` to be configured to authenticate when using python releases, so for now setting up a git dependency referencing the appropriate tag is the easiest way to make this work.
+
+A [git dependency](https://python-poetry.org/docs/dependency-specification/#git-dependencies) is specified by replacing the `middleware = ` line in the path dependencies
+example with `{ git = ... }`. For instance:
 
 ```
 [tool.poetry.dependencies]
 python = "^3.10"
-middleware = { url = "https://github.com/Kurumiiw/Middleware/releases/download/v0.1.0RC1/middleware-0.1.0.tar.gz" }
+middleware = { git = "https://github.com/Kurumiiw/Middleware.git", tag = "v0.1.0RC2", subdirectory="middleware" }
 ```
 
 A list of releases is provided [here](https://github.com/Kurumiiw/Middleware/releases)
