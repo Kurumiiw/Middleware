@@ -220,13 +220,34 @@ Reliable communication requires at least two threads to function if testing on a
 
 Configuration is split into two categories: middleware configuration and system configuration. Each category has an INI file associated with it in the root directory of the repository.
 
-System configuration must be applied manually by calling the script "configure_system.py" with elevated privileges. This configures the TCP/IP stack according to system_config.ini. Each option is documented in the INI file.
+#### System/TCP Configuration
+System configuration must be applied manually by calling the script "configure_system.py" with elevated privileges. This configures the TCP/IP stack according to system_config.ini, and must be done once when installing the middleware, and after changing any values in the system_config.ini file. Each option is documented in the INI file. This script might not work on all systems. If this is the case, the following commands can be used (with elevated privilages) instead of running the script:
 
+These commands will allow sockets to use tcp vegas as their congestion algorithm (the congestion algorithm that the middleware will use is chosen in the middleware config, see below), if both the script, and these commands, do not work then the congestion control can only be set to either reno or cubic.
+```
+# This will load tcp vegas as a kernel module, making it possible to use it as congestion control
+modprobe tcp_vegas
+
+# This will force tcp vegas to be loaded and possible for sockets to use. This is done by setting the
+# default congestion control to vegas, which is then reset to reno afterwards
+sysctl -w net.ipv4.tcp_congestion_control=vegas
+sysctl -w net.ipv4.tcp_congestion_control=reno
+
+# This will allow sockets to use reno cubic and vegas as congestion algorithms
+sysctl -w net.ipv4.tcp_available_congestion_control="reno cubic vegas"
+sysctl -w net.ipv4.tcp_allowed_congestion_control="reno cubic vegas"
+```
+
+Each option in the system_config.ini file can be set manually by calling
+```
+# NAME is the name used in system_config.ini, VALUE is the value wanted to be set. Strings with spaces can be used by surrounding the string with quotes (")
+sysctl -w net.ipv4.NAME=VALUE
+```
+
+#### Middleware Configuration
 Middleware configuration is applied automatically when the middleware is loaded as a python module. As opposed to system configuration,
-middleware configuration will be loaded from the current working directory of the process that imported the middleware module, with
-the middleware_config.ini in the root directory as fallback. Each option available is documented in the middleware_config.ini file
-in the root directory. Note that all variables must be set by a middleware config INI file, and there may only be one section called
-"middleware_configuration". It is advised to copy to middleware_config.ini file in the root directory and modify this, intead of
+the middleware will try to load the config from any file named "middleware_config.ini"  in the current working directory of the process
+that imported the middleware module, with the middleware_config.ini in the root directory as fallback. Each option available is documented in the middleware_config.ini file in the root directory. Note that all variables must be set by a middleware config INI file, and there may only be one section called "middleware_configuration". It is advised to copy to middleware_config.ini file in the root directory and modify this, intead of
 writing it from scratch.
 
 Currently, the following options are available in the config file:
