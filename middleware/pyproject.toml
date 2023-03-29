@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "middleware"
-version = "0.1.0"
+version = "0.2.0"
 description = ""
 authors = ["thorbjoernl <51087536+thorbjoernl@users.noreply.github.com>"]
 readme = "README.md"
@@ -12,6 +12,7 @@ python = "^3.10"
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.1"
 black = "^23.1.0"
+pytest-coverage = "^0.0"
 
 [build-system]
 requires = ["poetry-core"]

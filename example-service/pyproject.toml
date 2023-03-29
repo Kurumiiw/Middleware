@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "example-service"
+version = "0.1.0"
+description = "This service showcases how the middleware can be used as an external dependency to a custom application."
+authors = ["Thorbjørn Lundin <51087536+thorbjoernl@users.noreply.github.com>"]
+readme = "README.md"
+packages = [{include = "example_service"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+middleware = { path = "../middleware/", develop = true }
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.1.0"
+pytest = "^7.2.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
