@@ -1,4 +1,5 @@
 import sys
+import os
 from middleware.middlewareAPI import *
 import threading
 import json
@@ -185,5 +186,6 @@ class Worker(threading.Thread):
 
 if __name__ == "__main__":
     controller = Controller()
-    controller.configure("config.json")
+    path = os.path.dirname(os.path.realpath(__file__))
+    controller.configure(path + "/config.json")
     controller.run_simultaneous()
