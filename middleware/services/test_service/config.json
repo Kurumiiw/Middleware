@@ -1,42 +1,106 @@
 {
-    "workers": [
+    "workers": [ 
         {
             "mtu": 1500,
-            "name": "worker_1",
+            "name": "file_transfer",
             "TOS": 60,
             "reliable": true,
             "port": 56456,
             
-            "packet_size": 10000,
-            "packet_size_variance": 0.0,
+            "packet_size": 10000000,
+            "packet_size_variance": 0.5,
 
             "send_interval": 0,
             "send_interval_variance": 0.0,
 
-            "burst_size": 50,
+            "burst_size": 1,
             "burst_size_variance": 0.0,
-            "burst_interval": 20,
-            "burst_interval_variance": 0.0
+            "burst_interval": 10000,
+            "burst_interval_variance":0.2,
+            
+            "total_packets": 25
+
 
         },
         {
             "mtu": 1500,
-            "name": "worker_2",
+            "name": "telemetry_update",
             "TOS": 60,
             "reliable": true,
-            "port": 5000,
-            
-            "packet_size": 10000,
+            "port": 56457,
+        
+            "packet_size": 50,
             "packet_size_variance": 0.0,
-
-            "send_interval": 0,
-            "send_interval_variance": 0.0,
-
-            "burst_size": 50,
+        
+            "send_interval": 100,
+            "send_interval_variance": 0.1,
+        
+            "burst_size": 1,
             "burst_size_variance": 0.0,
-            "burst_interval": 20,
-            "burst_interval_variance": 0.0
-
+            "burst_interval": 0,
+            "burst_interval_variance": 0.0,
+        
+            "total_packets": 2500
+        },
+        {
+            "mtu": 1500,
+            "name": "data_transfer",
+            "TOS": 60,
+            "reliable": true,
+            "port": 56459,
+        
+            "packet_size": 1000,
+            "packet_size_variance": 0.2,
+        
+            "send_interval": 0.05,
+            "send_interval_variance": 0.025,
+        
+            "burst_size": 10,
+            "burst_size_variance": 0.5,
+            "burst_interval": 10,
+            "burst_interval_variance": 0.2,
+        
+            "total_packets": 10000
+        },
+        {
+            "mtu": 1500,
+            "name": "voice_call",
+            "TOS": 60,
+            "reliable": true,
+            "port": 56460,
+        
+            "packet_size": 50,
+            "packet_size_variance": 0.0,
+        
+            "send_interval": 0.1,
+            "send_interval_variance": 0.05,
+        
+            "burst_size": 1,
+            "burst_size_variance": 0.0,
+            "burst_interval": 5,
+            "burst_interval_variance": 0.2,
+        
+            "total_packets": 10000
+        },
+        {
+            "mtu": 1500,
+            "name": "video_streaming",
+            "TOS": 60,
+            "reliable": true,
+            "port": 56461,
+        
+            "packet_size": 1500,
+            "packet_size_variance": 0.5,
+        
+            "send_interval": 0.01,
+            "send_interval_variance": 0.005,
+        
+            "burst_size": 1,
+            "burst_size_variance": 0.0,
+            "burst_interval": 5,
+            "burst_interval_variance": 0.3,
+        
+            "total_packets": 10000
         }
     ]
 }
