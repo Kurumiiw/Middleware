@@ -41,17 +41,20 @@ class Controller:
             self.config = json.load(f)
 
         self.reliable.bind(("", 5000))
+        self.reliable._socko.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         self.reliable.listen(len(self.config["workers"]))
         
         # Configure workers
         for worker in self.config["workers"]:
             self.workers[worker["name"]] = Worker(worker)
-            conn, _ = self.reliable.accept()
-            conn.settimeout(0)
-            self.connections[worker["name"]] = conn
+            if worker["reliable"]:
+                conn, _ = self.reliable.accept()
+                conn.settimeout(0)
+                self.connections[worker["name"]] = conn
         
         print(len(self.workers))
         self.unreliable.bind(("", 5000))
+        self.unreliable.settimeout(0)
     
     def run_simultaneous(self):
         self.running = True
@@ -65,13 +68,39 @@ class Controller:
                     conn.recv(256*256)
                 except:
                     pass
-            time.sleep(0.01)
+            time.sleep(0.05)
             for worker in self.workers.values():
                 print(f"Progress {worker.name}: {(worker.total_packets-worker.progress)/worker.total_packets*100:.2f}%")
             print(LINE_BACK*len(self.workers), end=LINE_CLEAR)
         self.running = False
 
-    
+    def run_single(self, name):
+        self.workers[name].start()
+
+        while self.workers[name].is_alive():
+            if self.workers[name].reliable:
+                try:
+                    data = self.connections[name].recv(256*256)
+                    self.workers[name].statistics["receive_bytes"] += len(data)
+                    print(f"Progress {name}: {(self.workers[name].total_packets-self.workers[name].progress)/self.workers[name].total_packets*100:.2f}%", end="\r")
+                except Exception as e:
+                    pass
+            else:
+                try:
+                    data, _ = self.unreliable.recvfrom()
+                    self.workers[name].statistics["receive_bytes"] += len(data)
+                    print(f"Progress {name}: {(self.workers[name].total_packets-self.workers[name].progress)/self.workers[name].total_packets*100:.2f}%", end="\r")
+                except Exception as e:
+                    pass
+            time.sleep(0.05)
+        self.running = False
+        print()
+        print(f"Received: {self.workers[name].statistics['receive_bytes']}")
+        print(f"Sent: {self.workers[name].statistics['send_bytes']}")
+        print(f"Data bytest sent: {self.workers[name].statistics['data_bytes']}")
+        print(f"Overhead bytes: {self.workers[name].statistics['send_bytes']-self.workers[name].statistics['data_bytes']}")
+        print(f"Overhead ratio: {(self.workers[name].statistics['send_bytes']-self.workers[name].statistics['data_bytes'])/self.workers[name].statistics['send_bytes']*100:.2f}%")
+
     
 
 
@@ -134,18 +163,28 @@ class Worker(threading.Thread):
 
         if self.reliable:
             self.sock = MiddlewareReliable()
-            self.sock.bind(("", self.port))
+            self.sock._socko.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+            if self.port != 0:
+                self.sock.bind(("", self.port))
+                print(f"Worker {self.name} bound to port {self.port} (reliable)")
             self.sock.connect(("localhost", 5000))
         else:
             self.sock = MiddlewareUnreliable()
-            self.sock.bind(("", self.port))
+            if self.port != 0:
+                print(f"Worker {self.name} bound to port {self.port} (unreliable)")
+                self.sock.bind(("", self.port))
+            else:
+                print(f"Worker {self.name} bound wildcard port (unreliable)")
         self.sock.set_tos(self.TOS)
 
         
         self.statistics = {
             "name": self.name,
             "send_events": [],
-            "receive_events": []
+            "receive_events": [],
+            "data_bytes": 0,
+            "send_bytes": 0,
+            "receive_bytes": 0,
         }
 
 
@@ -155,9 +194,9 @@ class Worker(threading.Thread):
 
         def send_packet(packet):
             if self.reliable:
-                self.sock.send(packet)
+                self.statistics["send_bytes"] += self.sock.send(packet)
             else:
-                self.sock.sendto(packet, ("localhost", 5000))
+                self.statistics["send_bytes"] += self.sock.sendto(packet, ("localhost", 5000))
             self.statistics["send_events"].append({
                 "time": time.time(),
                 "size": len(packet)
@@ -174,6 +213,7 @@ class Worker(threading.Thread):
         
             while burst_size > 0:
                 packet = random.randbytes(packet_size)
+                self.statistics["data_bytes"] += packet_size
                 send_packet(packet)
                 burst_size -= 1
                 self.progress -= 1
@@ -188,4 +228,6 @@ if __name__ == "__main__":
     controller = Controller()
     path = os.path.dirname(os.path.realpath(__file__))
     controller.configure(path + "/config.json")
-    controller.run_simultaneous()
+    # controller.run_simultaneous()
+    input("Press enter to start test...")
+    controller.run_single("emil_issue")

@@ -4,6 +4,7 @@ from middleware.configuration.config import config as _config
 import collections
 import math
 import time
+import sys
 
 
 class MiddlewareReliable:
@@ -25,11 +26,12 @@ class MiddlewareReliable:
             20  # TCP options are only used in SYN,ACK and mss is not affected by this
         )
         self._mss = self._mtu - ip_header_size - tcp_header_size
-        self._socko.setsockopt(IPPROTO_TCP, TCP_MAXSEG, self._mss)
         self._socko.setsockopt(IPPROTO_IP, IP_OPTIONS, b"")
-        self._socko.setsockopt(
-            IPPROTO_TCP, TCP_CONGESTION, _config.congestion_algorithm.encode("utf-8")
-        )
+        if sys.platform == "linux":
+            self._socko.setsockopt(IPPROTO_TCP, TCP_MAXSEG, self._mss)
+            self._socko.setsockopt(
+                IPPROTO_TCP, TCP_CONGESTION, _config.congestion_algorithm.encode("utf-8")
+            )
         # self._socko.setsockopt(IPPROTO_IP, IP_MTU_DISCOVER, IP_PMTUDISC_DO) TODO: is path MTU discovery something we want?
 
     def bind(self, address: tuple[str, int]) -> None:
@@ -188,14 +190,16 @@ class MiddlewareUnreliable:
          - ChatGPT 2023"""
         self._socko.close()
 
-    def sendto(self, data: bytes, address: tuple[str, int]) -> None:
+    def sendto(self, data: bytes, address: tuple[str, int]) -> int:
         """
         Mimics Python socket.sendto, but the blocking timeout affects an internal socket.sendto call
         for each fragment sent, and not the MiddlewareUnreliable.sendto call. Rated for max payload of 63488 B
         (this can be queried with MiddlewareUnreliable.get_max_payload_size)
         """
+        sent = 0
         for fragment in self._fragmenter.fragment(data):
-            self._socko.sendto(fragment, address)
+            sent += self._socko.sendto(fragment, address)
+        return sent
 
     def recvfrom(self) -> tuple[bytes, tuple[str, int]]:
         """
@@ -205,16 +209,19 @@ class MiddlewareUnreliable:
         while True:
             # NOTE: Probe received fragment size
             buffer_size = _config.mtu
-            while True:
-                _, _, msg_flags, _ = self._socko.recvmsg(buffer_size, 0, MSG_PEEK)
-                if msg_flags == MSG_TRUNC:
-                    buffer_size *= 2
-                    continue
-                else:
-                    break
+            if sys.platform == "win32":
+                frag, addr = self._socko.recvfrom(buffer_size)
+            else:
+                while True:
+                    _, _, msg_flags, _ = self._socko.recvmsg(buffer_size, 0, MSG_PEEK)
+                    if msg_flags & MSG_TRUNC:
+                        buffer_size *= 2
+                        continue
+                    else:
+                        break
 
-            frag, _, msg_flags, addr = self._socko.recvmsg(buffer_size)
-            assert (msg_flags & MSG_TRUNC) == 0
+                frag, _, msg_flags, addr = self._socko.recvmsg(buffer_size)
+                assert (msg_flags & MSG_TRUNC) == 0
 
             # NOTE: Old datagrams (partial/complete datagrams containing old fragments) are timed out after the blocking socket.recvfrom
             #       operation has completed to avoid datagram id collisions when a lot of time is spent in socket.recvfrom

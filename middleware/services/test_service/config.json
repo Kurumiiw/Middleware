@@ -101,6 +101,26 @@
             "burst_interval_variance": 0.3,
         
             "total_packets": 10000
+        },
+        {
+            "mtu": 512,
+            "name": "emil_issue",
+            "TOS": 0,
+            "reliable": false,
+            "port": 0,
+        
+            "packet_size": 7250,
+            "packet_size_variance": 0.05,
+        
+            "send_interval": 0,
+            "send_interval_variance": 0.005,
+        
+            "burst_size": 1,
+            "burst_size_variance": 0.0,
+            "burst_interval": 95,
+            "burst_interval_variance": 0.05,
+        
+            "total_packets": 500
         }
     ]
 }
