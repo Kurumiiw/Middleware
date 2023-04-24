@@ -6,6 +6,8 @@
             "TOS": 60,
             "reliable": true,
             "port": 56456,
+            "destPort":5001,
+            "destIP": "localhost",
             
             "packet_size": 10000000,
             "packet_size_variance": 0.5,
@@ -28,6 +30,8 @@
             "TOS": 60,
             "reliable": true,
             "port": 56457,
+            "destPort":5001,
+            "destIP": "localhost",
         
             "packet_size": 50,
             "packet_size_variance": 0.0,
@@ -48,6 +52,8 @@
             "TOS": 60,
             "reliable": true,
             "port": 56459,
+            "destPort":5001,
+            "destIP": "localhost",
         
             "packet_size": 1000,
             "packet_size_variance": 0.2,
@@ -68,6 +74,8 @@
             "TOS": 60,
             "reliable": true,
             "port": 56460,
+            "destPort":5001,
+            "destIP": "localhost",
         
             "packet_size": 50,
             "packet_size_variance": 0.0,
@@ -88,6 +96,8 @@
             "TOS": 60,
             "reliable": true,
             "port": 56461,
+            "destPort":5001,
+            "destIP": "localhost",
         
             "packet_size": 1500,
             "packet_size_variance": 0.5,
@@ -106,9 +116,11 @@
             "mtu": 512,
             "name": "emil_issue",
             "TOS": 0,
-            "reliable": false,
+            "reliable": true,
             "port": 0,
-        
+            "destPort":5001,
+            "destIP": "localhost",
+            
             "packet_size": 7250,
             "packet_size_variance": 0.05,
         
