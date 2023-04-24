@@ -30,7 +30,9 @@ class MiddlewareReliable:
         if sys.platform == "linux":
             self._socko.setsockopt(IPPROTO_TCP, TCP_MAXSEG, self._mss)
             self._socko.setsockopt(
-                IPPROTO_TCP, TCP_CONGESTION, _config.congestion_algorithm.encode("utf-8")
+                IPPROTO_TCP,
+                TCP_CONGESTION,
+                _config.congestion_algorithm.encode("utf-8"),
             )
         # self._socko.setsockopt(IPPROTO_IP, IP_MTU_DISCOVER, IP_PMTUDISC_DO) TODO: is path MTU discovery something we want?
 

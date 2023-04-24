@@ -6,15 +6,16 @@ import json
 import random
 import time
 
+
 class Worker(threading.Thread):
     """
     Should:
     - Receive and set configuration from Controller.
     - Echo data as well as measured statistics to Controller.
     """
-    def __init__(self, config):
 
-        #Config legend:
+    def __init__(self, config):
+        # Config legend:
         # mtu: Maximum transmission unit
         # name: Name of worker. i.e. "file_transfer" should be named based on analogy to real-world service.
         # TOS: Type of service value
@@ -35,9 +36,7 @@ class Worker(threading.Thread):
 
         # total_packets: Total number of packets to send
 
-        #The difference between send_interval and burst_interval is that send_interval is the interval between sending packets, while burst_interval is the interval between bursts (or groups of packets). If burst_size is 0, then burst_interval is ignored.
-
-
+        # The difference between send_interval and burst_interval is that send_interval is the interval between sending packets, while burst_interval is the interval between bursts (or groups of packets). If burst_size is 0, then burst_interval is ignored.
 
         threading.Thread.__init__(self, daemon=True)
         self.mtu = config["mtu"]
@@ -77,7 +76,6 @@ class Worker(threading.Thread):
                 print(f"Worker {self.name} bound wildcard port (unreliable)")
         self.sock.set_tos(self.TOS)
 
-        
         self.statistics = {
             "name": self.name,
             "send_events": [],
@@ -87,10 +85,7 @@ class Worker(threading.Thread):
             "receive_bytes": 0,
         }
 
-
-    
     def run(self):
-
         if self.reliable:
             self.sock.connect((self.destIP, self.destPort))
 
@@ -100,30 +95,62 @@ class Worker(threading.Thread):
             if self.reliable:
                 self.statistics["send_bytes"] += self.sock.send(packet)
             else:
-                self.statistics["send_bytes"] += self.sock.sendto(packet, (self.destIP, self.destPort))
-            self.statistics["send_events"].append({
-                "time": time.time(),
-                "size": len(packet)
-            })
-        
-        #connect to controller
+                self.statistics["send_bytes"] += self.sock.sendto(
+                    packet, (self.destIP, self.destPort)
+                )
+            self.statistics["send_events"].append(
+                {"time": time.time(), "size": len(packet)}
+            )
+
+        # connect to controller
 
         while self.running:
-            packet_size = round(self.packet_size * (1 + random.uniform(-self.packet_size_variance, self.packet_size_variance)))
-            send_interval = self.send_interval * (1 + random.uniform(-self.send_interval_variance, self.send_interval_variance))
-            burst_size = min(round(self.burst_size * (1 + random.uniform(-self.burst_size_variance, self.burst_size_variance))), self.progress)
-            burst_interval = self.burst_interval * (1 + random.uniform(-self.burst_interval_variance, self.burst_interval_variance))
+            packet_size = round(
+                self.packet_size
+                * (
+                    1
+                    + random.uniform(
+                        -self.packet_size_variance, self.packet_size_variance
+                    )
+                )
+            )
+            send_interval = self.send_interval * (
+                1
+                + random.uniform(
+                    -self.send_interval_variance, self.send_interval_variance
+                )
+            )
+            burst_size = min(
+                round(
+                    self.burst_size
+                    * (
+                        1
+                        + random.uniform(
+                            -self.burst_size_variance, self.burst_size_variance
+                        )
+                    )
+                ),
+                self.progress,
+            )
+            burst_interval = self.burst_interval * (
+                1
+                + random.uniform(
+                    -self.burst_interval_variance, self.burst_interval_variance
+                )
+            )
 
-        
             while burst_size > 0:
-                print(f"Progress {self.name}: {(self.total_packets-self.progress)/self.total_packets*100:.2f}%                  ", end="\r")
+                print(
+                    f"Progress {self.name}: {(self.total_packets-self.progress)/self.total_packets*100:.2f}%                  ",
+                    end="\r",
+                )
                 packet = random.randbytes(packet_size)
                 self.statistics["data_bytes"] += packet_size
                 send_packet(packet)
                 burst_size -= 1
                 self.progress -= 1
-                time.sleep(send_interval/1000)
-            time.sleep(burst_interval/1000)
+                time.sleep(send_interval / 1000)
+            time.sleep(burst_interval / 1000)
             if self.progress <= 0:
                 print()
                 print("Done!")
@@ -131,21 +158,19 @@ class Worker(threading.Thread):
                 self.running = False
                 self.done = True
 
-    
 
 if __name__ == "__main__":
-        
     filepath = "config.json"
     config = {}
     workers = {}
     with open(filepath, "r") as f:
         config = json.load(f)
     for worker in config["workers"]:
-        workers[worker["name"]] = Worker(worker) # This works
+        workers[worker["name"]] = Worker(worker)  # This works
 
     def run_single(worker_name):
         worker = workers[worker_name]
         worker.start()
-    
+
     run_single("emil_issue")
     input("Running...")

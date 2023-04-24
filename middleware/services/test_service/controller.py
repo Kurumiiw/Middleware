@@ -9,6 +9,7 @@ import signal
 
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
+
 class Controller:
     """
     Should:
@@ -20,7 +21,8 @@ class Controller:
         - RTT, packet lost, retransmission overhead, amount of data received/sent on either end, etc.
         - Console
         - HTML report (??)
-     """
+    """
+
     def __init__(self, ip, port):
         self.connections = {}
         self.running = True
@@ -29,25 +31,31 @@ class Controller:
         self.reliable.bind((ip, port))
         self.reliable.listen(5)
         self.unreliable.bind((ip, port))
-    
-    def print_statistics(self, addr = None):
+
+    def print_statistics(self, addr=None):
         if addr == None:
             for i in self.connections:
                 stats = self.connections[i]
                 total_data_len = 0
                 for j in stats:
                     total_data_len += len(j[0])
-                print(i,":")
+                print(i, ":")
                 print("Total data", total_data_len)
-                print("Average bandwidth:", (total_data_len / (stats[-1][1] - stats[0][1])) * 8)
+                print(
+                    "Average bandwidth:",
+                    (total_data_len / (stats[-1][1] - stats[0][1])) * 8,
+                )
         else:
             stats = self.connections[addr]
             total_data_len = 0
             for j in stats:
                 total_data_len += len(j[0])
-            print(addr,":")
+            print(addr, ":")
             print("Total data:", total_data_len)
-            print("Average bandwidth:", (total_data_len / (stats[-1][1] - stats[0][1])) * 8)
+            print(
+                "Average bandwidth:",
+                (total_data_len / (stats[-1][1] - stats[0][1])) * 8,
+            )
 
     def run(self):
         def run_reliable():
@@ -59,11 +67,13 @@ class Controller:
                     if data == b"":
                         self.print_statistics(addr)
                         break
-            
+
             while True:
                 print("Ready to connect")
                 conn, addr = self.reliable.accept()
-                threading.Thread(target=run_conn, args=(conn, addr), daemon=True).start()
+                threading.Thread(
+                    target=run_conn, args=(conn, addr), daemon=True
+                ).start()
                 print(f"New connection from {addr}")
 
         def run_unreliable():
@@ -72,7 +82,7 @@ class Controller:
                 self.connections[address].append((data, time.time()))
             else:
                 self.connections[address] = [(data, time.time())]
-        
+
         rel_thread = threading.Thread(target=run_reliable, daemon=True)
         unrel_thread = threading.Thread(target=run_unreliable, daemon=True)
         rel_thread.start()
