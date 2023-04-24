@@ -127,6 +127,7 @@ class Worker(threading.Thread):
             if self.progress <= 0:
                 print()
                 print("Done!")
+                self.sock.close()
                 self.running = False
                 self.done = True
 

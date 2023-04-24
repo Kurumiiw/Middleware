@@ -29,6 +29,25 @@ class Controller:
         self.reliable.bind((ip, port))
         self.reliable.listen(5)
         self.unreliable.bind((ip, port))
+    
+    def print_statistics(self, addr = None):
+        if addr == None:
+            for i in self.connections:
+                stats = self.connections[i]
+                total_data_len = 0
+                for j in stats:
+                    total_data_len += len(j[0])
+                print(i,":")
+                print("Total data", total_data_len)
+                print("Average bandwidth:", (total_data_len / (stats[-1][1] - stats[0][1])) * 8)
+        else:
+            stats = self.connections[addr]
+            total_data_len = 0
+            for j in stats:
+                total_data_len += len(j[0])
+            print(addr,":")
+            print("Total data:", total_data_len)
+            print("Average bandwidth:", (total_data_len / (stats[-1][1] - stats[0][1])) * 8)
 
     def run(self):
         def run_reliable():
@@ -37,6 +56,9 @@ class Controller:
                 while True:
                     data = conn.recv(2048)
                     self.connections[addr].append((data, time.time()))
+                    if data == b"":
+                        self.print_statistics(addr)
+                        break
             
             while True:
                 print("Ready to connect")
