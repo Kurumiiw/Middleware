@@ -27,6 +27,24 @@ def main():
         sys.exit(1)
 
     try:
+        result = subprocess.run(
+            ["modprobe", "tcp_westwood"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+        )
+    except:
+        error_print("Failed to load the kernel module for tcp westwood.")
+        print("Reason:", result.stderr)
+        print("Exiting.")
+        sys.exit(1)
+
+    try:
+        subprocess.run(
+            ["sysctl", "-w", "net.ipv4.tcp_congestion_control=westwood"],
+            capture_output=True,
+            check=True,
+        )
         subprocess.run(
             ["sysctl", "-w", "net.ipv4.tcp_congestion_control=vegas"],
             capture_output=True,
@@ -41,7 +59,7 @@ def main():
             [
                 "sysctl",
                 "-w",
-                'net.ipv4.tcp_available_congestion_control="reno cubic vegas"',
+                'net.ipv4.tcp_available_congestion_control="reno cubic vegas westwood"',
             ],
             capture_output=True,
             check=True,
@@ -50,13 +68,13 @@ def main():
             [
                 "sysctl",
                 "-w",
-                'net.ipv4.tcp_allowed_congestion_control="reno cubic vegas"',
+                'net.ipv4.tcp_allowed_congestion_control="reno cubic vegas westwood"',
             ],
             capture_output=True,
             check=True,
         )
     except:
-        error_print("Failed to force load tcp vegas. Exiting.")
+        error_print("Failed to force load tcp congestion algorithms. Exiting.")
         sys.exit(1)
 
     conf_reader = configparser.ConfigParser()
