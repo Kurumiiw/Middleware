@@ -34,7 +34,8 @@ jobs:
       - uses: actions/setup-python@v3
         with:
           cache: pip
-      - run: python -m pip install poetry
-      - run: python -m poetry install
-      - run: python -m poetry run pytest --cov=middleware . --runslow
-      - run: python -m poetry run coverage report --fail-under=85
+      - run: sudo python -m pip install poetry
+      - run: sudo python -m poetry install
+      - run: sudo python -m poetry run python ../configure_system.py
+      - run: sudo python -m poetry run pytest --cov=middleware . --runslow
+      - run: sudo python -m poetry run coverage report --fail-under=85
