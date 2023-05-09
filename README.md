@@ -221,9 +221,11 @@ Reliable communication requires at least two threads to function if testing on a
 Configuration is split into two categories: middleware configuration and system configuration. Each category has an INI file associated with it in the root directory of the repository.
 
 #### System/TCP Configuration
+
 System configuration must be applied manually by calling the script "configure_system.py" with elevated privileges. This configures the TCP/IP stack according to system_config.ini, and must be done once when installing the middleware, and after changing any values in the system_config.ini file. Each option is documented in the INI file. This script might not work on all systems. If this is the case, the following commands can be used (with elevated privilages) instead of running the script:
 
 These commands will allow sockets to use tcp vegas as their congestion algorithm (the congestion algorithm that the middleware will use is chosen in the middleware config, see below), if both the script, and these commands, do not work then the congestion control can only be set to either reno or cubic.
+
 ```
 # This will load tcp vegas as a kernel module, making it possible to use it as congestion control
 modprobe tcp_vegas
@@ -239,14 +241,16 @@ sysctl -w net.ipv4.tcp_allowed_congestion_control="reno cubic vegas"
 ```
 
 Each option in the system_config.ini file can be set manually by calling
+
 ```
 # NAME is the name used in system_config.ini, VALUE is the value wanted to be set. Strings with spaces can be used by surrounding the string with quotes (")
 sysctl -w net.ipv4.NAME=VALUE
 ```
 
 #### Middleware Configuration
+
 Middleware configuration is applied automatically when the middleware is loaded as a python module. As opposed to system configuration,
-the middleware will try to load the config from any file named "middleware_config.ini"  in the current working directory of the process
+the middleware will try to load the config from any file named "middleware_config.ini" in the current working directory of the process
 that imported the middleware module, with the middleware_config.ini in the root directory as fallback. Each option available is documented in the middleware_config.ini file in the root directory. Note that all variables must be set by a middleware config INI file, and there may only be one section called "middleware_configuration". It is advised to copy to middleware_config.ini file in the root directory and modify this, intead of
 writing it from scratch.
 
@@ -256,6 +260,18 @@ Currently, the following options are available in the config file:
 - `fragment_timeout`: amount of time to wait after receiving new fragments before discarding the whole datagram
 - `congestion_algorithm`: the congestion algorithm to use for MiddlewareReliable sockets, must be one of the allowed algorithms set in system configuration
 - `echo_config_path`: if true the middleware will print the path of which middleware config file it loaded during initialization
+
+A number of preconfigured configuration files are provided, which can be used instead of creating custom configurations from scratch.
+
+| Network configuration     | Transfer rate | Latency | Packet loss | Configuration file                  |
+| ------------------------- | ------------- | ------- | ----------- | ----------------------------------- |
+| CNR                       | 10kbps        | 100ms   | 5%          | `cnr_config.ini`                    |
+| NATO narrow-band waveform | 16kbps        | 500 ms  | 0%          | `nato_narrowband_satcom_config.ini` |
+| SATCOM                    | 250kbps       | 550ms   | 0%          | `nato_narrowband_satcom_config.ini` |
+| Tactical broadband        | 2Mbps         | 100ms   | 1%          | `fast_config.ini`                   |
+| Low-band 5G               | 100Mbps       | 20ms    | 0%          | `fast_config.ini`                   |
+
+These configuration files can be found in the root folder of the project.
 
 ## Using the middleware in custom applications
 
