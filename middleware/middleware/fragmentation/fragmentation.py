@@ -12,14 +12,15 @@ MW_HEADER_SIZE = 5
 TOTAL_HEADER_SIZE = UDP_IP_HEADER_SIZE + MW_HEADER_SIZE
 MTU_MIN = 64
 MAX_DGRAM_PAYLOAD = (MTU_MIN - TOTAL_HEADER_SIZE) * 2**FRAG_IDX_BITS
-MAX_FRAG_PAYLOAD = config.mtu - TOTAL_HEADER_SIZE
 
 
 class Fragmenter:
     current_dgram_id: int
+    max_frag_payload: int
 
-    def __init__(self):
+    def __init__(self, mtu: int):
         self.current_dgram_id = 0
+        self.max_frag_payload = mtu - TOTAL_HEADER_SIZE
 
     def fragment(self, data: bytes) -> list[bytes]:
         if len(data) > MAX_DGRAM_PAYLOAD:
@@ -30,7 +31,7 @@ class Fragmenter:
         dgram_id = self.current_dgram_id
         self.current_dgram_id = (self.current_dgram_id + 1) % 2**DGRAM_ID_BITS
 
-        frag_count = int(math.ceil(len(data) / MAX_FRAG_PAYLOAD))
+        frag_count = int(math.ceil(len(data) / self.max_frag_payload))
 
         fragments = []
         for frag_idx in range(frag_count):
@@ -42,7 +43,7 @@ class Fragmenter:
             fragment = bytearray()
             fragment.extend(header)
             fragment.extend(
-                data[frag_idx * MAX_FRAG_PAYLOAD : (frag_idx + 1) * MAX_FRAG_PAYLOAD]
+                data[frag_idx * self.max_frag_payload : (frag_idx + 1) * self.max_frag_payload]
             )
 
             fragments.append(fragment)

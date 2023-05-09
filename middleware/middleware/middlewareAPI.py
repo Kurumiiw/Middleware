@@ -127,7 +127,7 @@ class MiddlewareUnreliable:
         self._socko = socket(AF_INET, SOCK_DGRAM)
         # self._socko.setsockopt(IPPROTO_IP, IP_MTU_DISCOVER, IP_PMTUDISC_DO) TODO: is path MTU discovery something we want?
 
-        self._fragmenter = _fragmentation.Fragmenter()
+        self._fragmenter = _fragmentation.Fragmenter(mtu)
         self._reassembler = _fragmentation.Reassembler()
         self._mtu = mtu
 
