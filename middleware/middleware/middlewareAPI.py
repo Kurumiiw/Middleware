@@ -209,21 +209,7 @@ class MiddlewareUnreliable:
         or a complete MiddlewareUnreliable datagram has arrived
         """
         while True:
-            # NOTE: Probe received fragment size
-            buffer_size = _config.mtu
-            if sys.platform == "win32":
-                frag, addr = self._socko.recvfrom(buffer_size)
-            else:
-                while True:
-                    _, _, msg_flags, _ = self._socko.recvmsg(buffer_size, 0, MSG_PEEK)
-                    if msg_flags & MSG_TRUNC:
-                        buffer_size *= 2
-                        continue
-                    else:
-                        break
-
-                frag, _, msg_flags, addr = self._socko.recvmsg(buffer_size)
-                assert (msg_flags & MSG_TRUNC) == 0
+            frag, addr = self._socko.recvfrom(self._mtu)
 
             # NOTE: Old datagrams (partial/complete datagrams containing old fragments) are timed out after the blocking socket.recvfrom
             #       operation has completed to avoid datagram id collisions when a lot of time is spent in socket.recvfrom
