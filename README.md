@@ -261,7 +261,6 @@ Currently, the following options are available in the config file:
 - `congestion_algorithm`: the congestion algorithm to use for MiddlewareReliable sockets, must be one of the allowed algorithms set in system configuration
 - `echo_config_path`: if true the middleware will print the path of which middleware config file it loaded during initialization
 
-<<<<<<< HEAD
 A number of preconfigured configuration files are provided, which can be used instead of creating custom configurations from scratch.
 
 | Network configuration     | Transfer rate | Latency | Packet loss | Configuration file                  |
@@ -273,11 +272,10 @@ A number of preconfigured configuration files are provided, which can be used in
 | Low-band 5G               | 100Mbps       | 20ms    | 0%          | `fast_config.ini`                   |
 
 These configuration files can be found in the root folder of the project.
-=======
+
 ## Test service
 
 A test service for tuning the middleware was developed. A detailed readme documenting it is provided [here](./middleware/services/test_service/README.md)
->>>>>>> cacefba (Test service readme and minor test service fix.)
 
 ## Using the middleware in custom applications
 

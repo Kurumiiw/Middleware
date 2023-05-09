@@ -27,13 +27,13 @@ class MiddlewareReliable:
         )
         self._mss = self._mtu - ip_header_size - tcp_header_size
         self._socko.setsockopt(IPPROTO_IP, IP_OPTIONS, b"")
-        if sys.platform == "linu":
+        if sys.platform == "linux":
             self._socko.setsockopt(IPPROTO_TCP, TCP_MAXSEG, self._mss)
-            #self._socko.setsockopt(
-            #    IPPROTO_TCP,
-            #    TCP_CONGESTION,
-            #    _config.congestion_algorithm.encode("utf-8"),
-            #)
+            self._socko.setsockopt(
+                IPPROTO_TCP,
+                TCP_CONGESTION,
+                _config.congestion_algorithm.encode("utf-8"),
+            )
         # self._socko.setsockopt(IPPROTO_IP, IP_MTU_DISCOVER, IP_PMTUDISC_DO) TODO: is path MTU discovery something we want?
 
     def bind(self, address: tuple[str, int]) -> None:
