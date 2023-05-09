@@ -62,13 +62,13 @@ class Worker(threading.Thread):
         self.progress = self.total_packets
 
         if self.reliable:
-            self.sock = MiddlewareReliable()
+            self.sock = MiddlewareReliable(mtu=self.mtu)
             self.sock._socko.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
             if self.port != 0:
                 self.sock.bind(("", self.port))
                 print(f"Worker {self.name} bound to port {self.port} (reliable)")
         else:
-            self.sock = MiddlewareUnreliable()
+            self.sock = MiddlewareUnreliable(mtu=self.mtu)
             if self.port != 0:
                 print(f"Worker {self.name} bound to port {self.port} (unreliable)")
                 self.sock.bind(("", self.port))
