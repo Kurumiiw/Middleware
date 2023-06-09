@@ -1,3 +1,5 @@
+# 📚 [Read the final report which goes over the theory and results!](https://github.com/Kurumiiw/Middleware/blob/main/report.pdf) 
+
 # FFI & NTNU Informatics Bachelor project collaboration 2023 - Network communication middleware
 
 <img src="./documentation_images/header_1.png" alt="IT2901 Informatics Project II - NTNU & FFI: Network communication middleware"/>
